@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepReader - AI Bilingual Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary: #fdfbf7;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #2563eb;
+            --border: #e2e8f0;
+        }
+
+        body.dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #111827;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent: #60a5fa;
+            --border: #334155;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* BOOK TYPOGRAPHY */
+        .book-text {
+            font-family: 'Crimson Pro', serif;
+            line-height: 1.6;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+
+            /* Only break words when absolutely necessary, never mid-character */
+            overflow-wrap: break-word;
+            word-break: normal;
+            hyphens: none;
+        }
+
+        /* Content Area should never scroll horizontally */
+        #pageContent {
+            overflow-x: hidden;
+        }
+
+        /* PARAGRAPH LAYOUT */
+        /* A "paragraph block" groups one or more source fragments into a visual paragraph */
+        .paragraph-block {
+            margin-bottom: 1.4em;
+            display: block;
+            width: 100%;
+        }
+
+        /* Legacy wrapper kept for compat */
+        .paragraph-wrapper {
+            margin-bottom: 0;
+            display: inline;
+        }
+
+        /* IMMERSIVE MODE: Flows like a real book */
+        .is-immersive .paragraph-block {
+            text-align: justify;
+            text-justify: inter-word;
+        }
+
+        /* paragraph-text is inline so justify on parent applies to its line boxes */
+        .paragraph-text {
+            display: inline;
+            white-space: normal;
+        }
+
+        /* Clickable sentence span — inline so it flows within justified text */
+        .sentence {
+            cursor: pointer;
+            display: inline;
+            border-radius: 2px;
+            transition: background-color 0.15s;
+        }
+        .sentence:hover {
+            background-color: rgba(37, 99, 235, 0.06);
+        }
+        body.dark .sentence:hover {
+            background-color: rgba(96, 165, 250, 0.1);
+        }
+
+        /* Sentence translation popover */
+        #sentencePopover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            max-width: 420px;
+            width: 90vw;
+        }
+        #sentencePopover .sentence-orig {
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        #sentencePopover .sentence-trans {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9em;
+            color: var(--accent);
+            font-weight: 500;
+            line-height: 1.45;
+        }
+
+        /* Interactive Words — NO margin; spacing handled by text nodes */
+        .word {
+            display: inline;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* UI Elements */
+        .btn-theme {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+        .btn-theme:hover { background-color: var(--border); }
+
+        select {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .sidebar-item {
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .sidebar-item:hover { background-color: var(--bg-secondary); color: var(--accent); }
+
+        #wordPopover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- CONFIGURATION AREA -->
+    <script>
+        const DEEPSEEK_API_KEY = "sk-6245d4a4a89b4bae9db311fd3d83d17c";
+    </script>
+
+
+    <header class="h-16 flex-none bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center justify-between px-6 shadow-sm z-20">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="showLibrary()">
+                <span class="text-2xl">📚</span>
+                <h1 class="text-xl font-bold tracking-tight">DeepReader</h1>
+            </div>
+            <div class="h-6 w-px bg-gray-300 dark:bg-slate-700 mx-2"></div>
+            <div class="flex gap-2 items-center">
+                <button onclick="document.getElementById('uploadInput').click()" class="btn-theme text-xs px-3 py-1.5 rounded transition">+ New Book</button>
+                <select id="targetLang" class="text-xs px-2 py-1.5 rounded outline-none focus:border-blue-500 transition">
+                    <option value="English">To English</option>
+                    <option value="Spanish">To Spanish</option>
+                    <option value="French">To French</option>
+                    <option value="German">To German</option>
+                    <option value="Chinese">To Chinese</option>
+                    <option value="Japanese">To Japanese</option>
+                </select>
+
+            </div>
+            <input type="file" id="uploadInput" accept=".pdf,.txt,.json" class="hidden">
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <span class="text-xs uppercase font-bold text-gray-400">Aa</span>
+                <input type="range" id="fontSizeSlider" min="16" max="28" value="19" class="w-24">
+            </div>
+            <div id="pageNavCtrl" class="hidden flex items-center gap-2 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg p-1">
+                <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded w-8 text-center transition">←</button>
+                <span id="pageIndicator" class="text-sm font-mono w-20 text-center">0 / 0</span>
+                <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded w-8 text-center transition">→</button>
+            </div>
+            <button id="themeToggle" class="p-2 rounded-full btn-theme transition">🌗</button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        <aside class="w-64 flex-none bg-[var(--bg-tertiary)] border-r border-[var(--border)] flex flex-col z-10">
+            <div class="flex border-b border-[var(--border)]">
+                <button id="tabChapters" onclick="switchSidebar('chapters')" class="flex-1 p-3 text-xs font-bold uppercase tracking-widest border-b-2 border-accent text-accent">Chapters</button>
+                <button id="tabBookmarks" onclick="switchSidebar('bookmarks')" class="flex-1 p-3 text-xs font-bold uppercase tracking-widest border-b-2 border-transparent text-gray-400">Bookmarks</button>
+            </div>
+            <div id="sidebarChapters" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <li class="text-sm text-gray-400 p-2 italic text-center">No chapters found</li>
+            </div>
+            <div id="sidebarBookmarks" class="hidden flex-1 overflow-y-auto p-2 space-y-1">
+                <li class="text-sm text-gray-400 p-2 italic text-center">No bookmarks</li>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-hidden relative bg-[var(--bg-primary)]" id="mainScroll">
+            <div id="libraryView" class="absolute inset-0 z-10 bg-[var(--bg-primary)] p-8 overflow-y-auto">
+                <h2 class="text-3xl font-bold mb-2">My Library</h2>
+                <p class="text-[var(--text-secondary)] mb-8 font-medium">Click a book to resume reading.</p>
+                <div id="libraryGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+            </div>
+
+            <!-- READER VIEW -->
+            <div id="readerView" class="max-w-6xl mx-auto h-full flex flex-col hidden px-6 md:px-16 transition-all">
+                <div class="flex-none pt-8 flex justify-between items-end mb-6 border-b border-[var(--border)] pb-4">
+                    <h2 id="bookTitleDisplay" class="text-2xl font-bold font-serif line-clamp-1">Untitled</h2>
+                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-gray-300 hover:text-yellow-500 transition">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v18l7-3 7 3V3H5z"/></svg>
+                    </button>
+                </div>
+                <div id="pageContent" class="flex-1 book-text is-immersive overflow-y-auto pr-2 pb-32 scroll-smooth"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Word Definition Popover (right-click / long-press) -->
+    <div id="wordPopover" class="fixed z-[100] rounded-lg p-3 w-64 hidden transition-all">
+        <div class="flex justify-between items-start mb-1">
+            <span id="targetWord" class="font-bold text-blue-500">Word</span>
+            <button onclick="closePopover()" class="text-gray-400 hover:text-gray-600">×</button>
+        </div>
+        <div id="wordDefinition" class="text-sm text-[var(--text-secondary)] leading-tight">Loading...</div>
+    </div>
+
+    <!-- Sentence Translation Popover (left-click) -->
+    <div id="sentencePopover" class="fixed z-[100] rounded-lg p-4 hidden transition-all">
+        <div class="flex justify-between items-start mb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Translation</span>
+            <button onclick="closeSentencePopover()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <div class="sentence-orig" id="sentenceOrigText"></div>
+        <div class="sentence-trans" id="sentenceTransText">Loading...</div>
+    </div>
+
+    <script>
+        let appState = {
+            id: null,
+            title: "Untitled Book",
+
+            // NEW: preserve layout using pages -> paragraphs
+            pages: [], // [{ paragraphs: [{ original: "...", translation: null, paragraphId: "pX" }] }]
+
+            bookmarks: [],
+            chapters: [],
+            currentPage: 0,
+            totalPages: 0,
+            fontSize: 19,
+            targetLang: "English",
+
+            lastModified: Date.now()
+        };
+
+        let isDark = false;
+        let currentSidebar = 'chapters';
+
+        const DB_NAME = 'DeepReaderDB_v2';
+        const DB_VERSION = 2; // bumped due to schema change
+        let db;
+
+        const els = {
+            libraryView: document.getElementById('libraryView'),
+            libraryGrid: document.getElementById('libraryGrid'),
+            readerView: document.getElementById('readerView'),
+            pageContent: document.getElementById('pageContent'),
+            titleDisplay: document.getElementById('bookTitleDisplay'),
+            pageNavCtrl: document.getElementById('pageNavCtrl'),
+            pageIndicator: document.getElementById('pageIndicator'),
+            bookmarkBtn: document.getElementById('bookmarkBtn'),
+            bookmarkList: document.getElementById('sidebarBookmarks'),
+            chapterList: document.getElementById('sidebarChapters'),
+            fontSizeSlider: document.getElementById('fontSizeSlider'),
+            targetLang: document.getElementById('targetLang'),
+            wordPopover: document.getElementById('wordPopover'),
+            targetWord: document.getElementById('targetWord'),
+            wordDefinition: document.getElementById('wordDefinition'),
+            sentencePopover: document.getElementById('sentencePopover'),
+            sentenceOrigText: document.getElementById('sentenceOrigText'),
+            sentenceTransText: document.getElementById('sentenceTransText')
+        };
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });
+                };
+                request.onsuccess = (e) => { db = e.target.result; renderLibrary(); resolve(db); };
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveBookToDB(book) {
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['books'], 'readwrite');
+                const store = transaction.objectStore('books');
+                book.lastModified = Date.now();
+                store.put(book).onsuccess = () => resolve();
+            });
+        }
+
+        async function getBooksFromDB() {
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['books'], 'readonly');
+                const store = transaction.objectStore('books');
+                store.getAll().onsuccess = (e) => resolve(e.target.result);
+            });
+        }
+
+        window.onload = () => {
+            initDB();
+            els.fontSizeSlider.addEventListener('input', (e) => {
+                appState.fontSize = parseInt(e.target.value);
+                applyReaderSettings();
+            });
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                isDark = !isDark;
+                document.body.classList.toggle('dark', isDark);
+            });
+        };
+
+        function switchSidebar(tab) {
+            currentSidebar = tab;
+            const isChapters = tab === 'chapters';
+            document.getElementById('tabChapters').classList.toggle('border-accent', isChapters);
+            document.getElementById('tabChapters').classList.toggle('text-accent', isChapters);
+            document.getElementById('tabBookmarks').classList.toggle('border-accent', !isChapters);
+            document.getElementById('tabBookmarks').classList.toggle('text-accent', !isChapters);
+            els.chapterList.classList.toggle('hidden', !isChapters);
+            els.bookmarkList.classList.toggle('hidden', isChapters);
+            updateSidebarUI();
+        }
+
+        function applyReaderSettings() {
+            els.pageContent.style.fontSize = `${appState.fontSize}px`;
+            els.targetLang.value = appState.targetLang;
+            els.pageContent.classList.add('is-immersive');
+        }
+
+        function showLibrary() {
+            els.readerView.classList.add('hidden');
+            els.pageNavCtrl.classList.add('hidden');
+            els.libraryView.classList.remove('hidden');
+            renderLibrary();
+        }
+
+        async function renderLibrary() {
+            const books = await getBooksFromDB();
+            els.libraryGrid.innerHTML = '';
+            books.sort((a,b) => b.lastModified - a.lastModified).forEach(book => {
+                const totalPages = book.totalPages ?? (book.pages ? book.pages.length : 0);
+                const card = document.createElement('div');
+                card.className = 'bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-5 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col aspect-[3/4] relative group';
+                card.innerHTML = `
+                    <h3 class="font-bold text-lg mb-2 line-clamp-3">${book.title}</h3>
+                    <p class="text-sm text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
+                    <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-2 transition-all" onclick="event.stopPropagation(); deleteBook('${book.id}')">🗑️</button>
+                `;
+                card.onclick = () => loadBook(book);
+                els.libraryGrid.appendChild(card);
+            });
+        }
+
+        async function deleteBook(id) {
+            if(!confirm('Permanently delete this book?')) return;
+            const transaction = db.transaction(['books'], 'readwrite');
+            transaction.objectStore('books').delete(id).onsuccess = () => renderLibrary();
+        }
+
+        function migrateOldBookIfNeeded(book) {
+            // If old schema exists (sentences-based), convert into pages with rough pagination
+            if (book.pages && Array.isArray(book.pages) && book.pages.length) return book;
+
+            if (Array.isArray(book.sentences) && book.sentences.length) {
+                // group by paragraphId, then chunk paragraphs into pages (fallback only)
+                const byPara = new Map();
+                book.sentences.forEach(s => {
+                    const id = String(s.paragraphId ?? 0);
+                    if (!byPara.has(id)) byPara.set(id, []);
+                    byPara.get(id).push(s);
+                });
+
+                const paraList = Array.from(byPara.entries())
+                    .sort((a,b) => Number(a[0]) - Number(b[0]))
+                    .map(([pid, arr], idx) => ({
+                        original: arr.map(x => x.original).join(' '),
+                        translation: null,
+                        paragraphId: `m${pid}`
+                    }));
+
+                const P_PER_PAGE = 6;
+                const pages = [];
+                for (let i = 0; i < paraList.length; i += P_PER_PAGE) {
+                    pages.push({ paragraphs: paraList.slice(i, i + P_PER_PAGE) });
+                }
+
+                book.pages = pages;
+                book.totalPages = pages.length;
+                delete book.sentences;
+                return book;
+            }
+
+            // minimal fallback
+            book.pages = book.pages || [];
+            book.totalPages = book.pages.length || 0;
+            return book;
+        }
+
+        function loadBook(book) {
+            book = migrateOldBookIfNeeded(book);
+            appState = book;
+
+            // Ensure derived fields
+            appState.totalPages = appState.pages.length;
+            appState.currentPage = Math.min(appState.currentPage || 0, Math.max(0, appState.totalPages - 1));
+
+            els.libraryView.classList.add('hidden');
+            els.readerView.classList.remove('hidden');
+            els.pageNavCtrl.classList.remove('hidden');
+
+            applyReaderSettings();
+            renderPage();
+            updateSidebarUI();
+        }
+
+        document.getElementById('uploadInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.name.toLowerCase().endsWith('.json')) {
+                const text = await file.text();
+                const book = migrateOldBookIfNeeded(JSON.parse(text));
+                await saveBookToDB(book);
+                loadBook(book);
+                return;
+            }
+
+            if(!DEEPSEEK_API_KEY) return alert("Please set API Key in the script!");
+
+            // NEW: PDF preserves page layout
+            let pages = [];
+            let chapters = [];
+
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                const extracted = await extractPdfPagesWithParagraphs(file);
+                pages = extracted.pages;
+                chapters = extracted.chapters;
+            } else {
+                // TXT: keep paragraph structure; create virtual pages (fallback)
+                const text = await file.text();
+                const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+                const paragraphObjs = paragraphs.map((p, idx) => ({
+                    original: p.replace(/\s+/g, ' '),
+                    translation: null,
+                    paragraphId: `t${idx}`
+                }));
+
+                const P_PER_PAGE = 6;
+                for (let i = 0; i < paragraphObjs.length; i += P_PER_PAGE) {
+                    pages.push({ paragraphs: paragraphObjs.slice(i, i + P_PER_PAGE) });
+                }
+
+                // crude chapter detection on paragraph starts
+                const chapterRegex = /^(chapter|capítulo|part|prologue|epilogue|section)\s*(\d+|[ivxlcm]+)?[:.]?\s*.*$/i;
+                paragraphObjs.forEach((p, i) => {
+                    if (chapterRegex.test(p.original) || (p.original === p.original.toUpperCase() && p.original.length < 60 && p.original.length > 3)) {
+                        // map paragraph to page index
+                        const pageIndex = Math.floor(i / P_PER_PAGE);
+                        chapters.push({ title: p.original.substring(0, 40), page: pageIndex });
+                    }
+                });
+            }
+
+            appState = {
+                id: crypto.randomUUID(),
+                title: file.name.replace(/\.[^/.]+$/, ""),
+                pages,
+                bookmarks: [],
+                chapters,
+                currentPage: 0,
+                totalPages: pages.length,
+                fontSize: 19,
+                targetLang: els.targetLang.value,
+                lastModified: Date.now()
+            };
+
+            loadBook(appState);
+            saveBookToDB(appState);
+        });
+
+        // ------------------------------------------------------------
+        // PDF PAGE LAYOUT EXTRACTOR (preserves pages + paragraph placement)
+        // ------------------------------------------------------------
+        async function extractPdfPagesWithParagraphs(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            const pages = [];
+            const chapters = [];
+            const chapterRegex = /^(chapter|capítulo|part|prologue|epilogue|section)\s*(\d+|[ivxlcm]+)?[:.]?\s*.*$/i;
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+
+                const items = content.items.map(item => ({
+                    str: item.str,
+                    x: item.transform[4],
+                    y: item.transform[5],
+                    w: item.width
+                }));
+
+                // Sort Top to Bottom, then Left to Right
+                items.sort((a, b) => {
+                    if (Math.abs(a.y - b.y) > 5) return b.y - a.y;
+                    return a.x - b.x;
+                });
+
+                // Build lines first (group by y)
+                const lines = [];
+                let currentLine = null;
+
+                const sameLine = (y1, y2) => Math.abs(y1 - y2) <= 3.5;
+
+                for (const it of items) {
+                    const s = (it.str ?? '');
+                    if (!s.trim() && s !== ' ') continue;
+
+                    if (!currentLine || !sameLine(currentLine.y, it.y)) {
+                        currentLine = { y: it.y, parts: [] };
+                        lines.push(currentLine);
+                    }
+                    currentLine.parts.push(it);
+                }
+
+                // Convert line parts into line strings with spacing/kerning
+                const lineObjs = lines.map(ln => {
+                    ln.parts.sort((a,b) => a.x - b.x);
+                    let lineText = '';
+                    let lastX = null;
+                    for (const p of ln.parts) {
+                        const txt = p.str;
+                        if (lastX !== null) {
+                            const dist = p.x - lastX;
+                            if (dist > 5 && !lineText.endsWith(' ')) lineText += ' ';
+                        }
+                        lineText += txt;
+                        lastX = p.x + p.w;
+                    }
+                    return { y: ln.y, text: lineText.replace(/\s+/g, ' ').trim() };
+                }).filter(l => l.text.length > 0);
+
+                // Group lines into paragraphs by vertical gaps
+                const paragraphs = [];
+                let curP = [];
+                for (let li = 0; li < lineObjs.length; li++) {
+                    const cur = lineObjs[li];
+                    const prev = lineObjs[li - 1];
+
+                    if (li === 0) {
+                        curP.push(cur);
+                        continue;
+                    }
+
+                    const gap = Math.abs(prev.y - cur.y);
+
+                    // Heuristic: bigger gap => new paragraph
+                    if (gap > 12) {
+                        paragraphs.push(curP);
+                        curP = [cur];
+                    } else {
+                        curP.push(cur);
+                    }
+                }
+                if (curP.length) paragraphs.push(curP);
+
+                // Convert paragraphs into text blocks
+                const paragraphObjs = paragraphs
+                    .map((pLines, pIdx) => {
+                        // Join lines within paragraph with spaces, but keep natural flow
+                        let text = pLines.map(x => x.text).join(' ');
+                        // Hyphenation repair when PDF breaks words with hyphen at line end
+                        text = text.replace(/-\s+/g, '');
+                        text = text.replace(/\s+/g, ' ').trim();
+                        return {
+                            original: text,
+                            translation: null,
+                            paragraphId: `p${i}_${pIdx}`
+                        };
+                    })
+                    .filter(p => p.original.length > 0);
+
+                // chapter detection from first few paragraphs of page
+                paragraphObjs.slice(0, 3).forEach(p => {
+                    if (chapterRegex.test(p.original) || (p.original === p.original.toUpperCase() && p.original.length < 60 && p.original.length > 3)) {
+                        chapters.push({ title: p.original.substring(0, 40), page: i - 1 });
+                    }
+                });
+
+                pages.push({ paragraphs: paragraphObjs });
+            }
+
+            // --- Cross-Page Paragraph Merging ---
+            // Fixes the issue where PDF page boundaries split a sentence in half.
+            for (let i = 0; i < pages.length; i++) {
+                if (i < pages.length - 1) {
+                    let currentPage = pages[i];
+                    let nextPage = pages[i + 1];
+
+                    while (currentPage.paragraphs.length > 0 && nextPage.paragraphs.length > 0) {
+                        let lastPara = currentPage.paragraphs[currentPage.paragraphs.length - 1];
+                        let firstNextPara = nextPage.paragraphs[0];
+
+                        // If the last paragraph on the current page doesn't end a sentence, pull the next fragment
+                        if (!isParaBreak(lastPara.original, firstNextPara.original)) {
+                            lastPara.original += " " + firstNextPara.original;
+                            nextPage.paragraphs.shift();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Clean up any empty pages and remap chapter pointers
+            const finalPages = [];
+            const oldToNewIndex = new Map();
+            for (let i = 0; i < pages.length; i++) {
+                if (pages[i].paragraphs.length > 0) {
+                    oldToNewIndex.set(i, finalPages.length);
+                    finalPages.push(pages[i]);
+                } else {
+                    // If a page became empty (absorbed into previous), map its index to the previous page
+                    oldToNewIndex.set(i, Math.max(0, finalPages.length - 1));
+                }
+            }
+
+            chapters.forEach(c => {
+                c.page = oldToNewIndex.get(c.page) ?? 0;
+            });
+
+            return { pages: finalPages, chapters };
+        }
+
+
+        function splitSentences(text) {
+            if (!text) return [];
+            text = text.trim();
+            if (!text) return [];
+
+            // Two-pass approach:
+            //
+            // 1) CJK sentence-enders (。！？…) optionally followed by closing
+            //    quotes/brackets — split immediately after them, no whitespace
+            //    or uppercase check needed (Chinese/Japanese/Korean don't have
+            //    uppercase, and sentences follow directly after punctuation).
+            //
+            // 2) Latin sentence-enders (.!?…) optionally followed by closing
+            //    quotes/brackets — split only when followed by whitespace then
+            //    an uppercase letter or opening quote (avoids breaking on
+            //    abbreviations like Mr., decimals like .30, etc.).
+
+            const CJK_SPLIT  = /([。！？…\u3002\uff01\uff1f]["\u201d\u2019\uff09\u300d\u300f\u3011】）»]*)/g;
+            const LATIN_SPLIT = /([.!?…]+["\'\u201d\u2019\)\]»]*)\s+(?=[A-Z\u00C0-\u024F\u0400-\u04FF\u4e00-\u9fff"\'\u201c\u2018\(\[«\u00a1\u00bf])/g;
+
+            // Detect if text is predominantly CJK
+            const cjkCount = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]/g) || []).length;
+            const isCJK = cjkCount > text.length * 0.15;
+
+            let parts = [];
+
+            if (isCJK) {
+                // Split after every CJK sentence-ending punctuation
+                let lastIdx = 0;
+                let m;
+                CJK_SPLIT.lastIndex = 0;
+                while ((m = CJK_SPLIT.exec(text)) !== null) {
+                    const end = m.index + m[0].length;
+                    const seg = text.slice(lastIdx, end).trim();
+                    if (seg) parts.push(seg);
+                    lastIdx = end;
+                    // skip optional whitespace between sentences
+                    while (lastIdx < text.length && /\s/.test(text[lastIdx])) lastIdx++;
+                }
+                const tail = text.slice(lastIdx).trim();
+                if (tail) {
+                    if (parts.length > 0) {
+                        // Trailing fragment without punctuation → merge into last
+                        parts[parts.length - 1] += tail;
+                    } else {
+                        parts.push(tail);
+                    }
+                }
+            } else {
+                // Latin / general: require uppercase after whitespace
+                let lastIdx = 0;
+                let m;
+                LATIN_SPLIT.lastIndex = 0;
+                while ((m = LATIN_SPLIT.exec(text)) !== null) {
+                    const end = m.index + m[1].length;
+                    const seg = text.slice(lastIdx, end).trim();
+                    if (seg) parts.push(seg);
+                    lastIdx = end;
+                    while (lastIdx < text.length && /\s/.test(text[lastIdx])) lastIdx++;
+                }
+                const tail = text.slice(lastIdx).trim();
+                if (tail) {
+                    if (/[.!?…。！？]["\'\u201d\u2019\)\]»]*\s*$/.test(tail)) {
+                        parts.push(tail);
+                    } else if (parts.length > 0) {
+                        parts[parts.length - 1] += ' ' + tail;
+                    } else {
+                        parts.push(tail);
+                    }
+                }
+            }
+
+            // Post-process: sub-split any overly long sentences for readability
+            const MAX_SENTENCE_LEN = 300;
+            const final = [];
+            for (const s of parts) {
+                if (s.length <= MAX_SENTENCE_LEN) {
+                    final.push(s);
+                    continue;
+                }
+                // Try splitting on semicolons first
+                const semiParts = s.split(/;\s*/);
+                if (semiParts.length > 1 && semiParts.every(p => p.length > 20)) {
+                    // Rejoin semicolons into the segments (keep the ;)
+                    const rebuilt = [];
+                    for (let i = 0; i < semiParts.length; i++) {
+                        rebuilt.push(i < semiParts.length - 1 ? semiParts[i] + ';' : semiParts[i]);
+                    }
+                    final.push(...rebuilt);
+                    continue;
+                }
+                // Try splitting on comma + clause starters (conjunctions, participial phrases)
+                const clauseRe = /,\s+(?=(?:and|but|or|so|yet|for|nor|then|while|where|when|which|who|that|as|the|with|after|before|until|though|although|because|since|if|once|unless|he|she|they|it|his|her|their|we|I|you|Jack|Ennis|[A-Z][a-z]+['']s)\b)/g;
+                const clauseParts = [];
+                let lastI = 0;
+                let cm;
+                clauseRe.lastIndex = 0;
+                while ((cm = clauseRe.exec(s)) !== null) {
+                    const seg = s.slice(lastI, cm.index + 1).trim(); // include the comma
+                    if (seg.length > 30) {
+                        clauseParts.push(seg);
+                        lastI = cm.index + 1;
+                        while (lastI < s.length && /\s/.test(s[lastI])) lastI++;
+                    }
+                }
+                const clauseTail = s.slice(lastI).trim();
+                if (clauseTail) {
+                    if (clauseParts.length > 0 && clauseTail.length < 40) {
+                        clauseParts[clauseParts.length - 1] += ' ' + clauseTail;
+                    } else {
+                        clauseParts.push(clauseTail);
+                    }
+                }
+                if (clauseParts.length > 1) {
+                    final.push(...clauseParts);
+                } else {
+                    final.push(s); // give up, keep as-is
+                }
+            }
+
+            return final.length ? final : [text];
+        }
+
+        // Determine if a paragraph text "closes" a paragraph (ends a sentence or is a standalone header)
+        // Passes `nextText` to perform lookahead checks
+        function isParaBreak(text, nextText = null) {
+            if (!text) return true;
+            const t = text.trim();
+
+            // 1. Unclosed Opening Quotes: If there's an unclosed opening quote, this paragraph is NOT complete
+            // Curly quotes: count left vs right separately
+            const curlyOpens  = (t.match(/\u201c/g) || []).length;
+            const curlyCloses = (t.match(/\u201d/g) || []).length;
+            if (curlyOpens > curlyCloses) return false;
+            // Straight double quotes: odd count = unclosed
+            const straightDbl = (t.match(/"/g) || []).length;
+            if (straightDbl % 2 !== 0) return false;
+
+            // 2. Hyphens/Dashes: Ends with a hyphen or dash (word/number split across fragments like ".30-")
+            if (/[-\u2013\u2014]$/.test(t)) return false;
+
+            // 3. Comma Rule (CRITICAL FIX): If it ends with a comma (even if followed by a quote or bracket), 
+            // it's highly likely a continuation, not a sentence end.
+            if (/[,，][ \u201d"'\)\]»]*$/.test(t)) return false;
+
+            // 4. Lookahead Context (CRITICAL FIX): If the very next fragment starts with a lowercase letter,
+            // it is overwhelmingly likely to be a continuation of the same sentence.
+            if (nextText) {
+                const nt = nextText.trim();
+                // Check if starts with a lowercase letter (ignoring leading quotes/brackets)
+                if (/^["'\u2018\u201c\(\[]*[a-z]/.test(nt)) return false;
+            }
+
+            // 5. Normal Endings: Ends with sentence-ending punctuation or closing quote
+            if (/[.!?…\u201d"»。！？][ \u201d"'\)\]»]*$/.test(t)) return true;
+
+            // 6. Headers/Titles: Very short standalone text (title/header/attribution line)
+            if (t.length < 60 && !/[,，]\s*$/.test(t)) return true;
+
+            return false;
+        }
+
+        // Group source paragraph objects into visual paragraph blocks
+        // Fragments that don't end a sentence get merged with the next fragment
+        function groupParagraphs(paragraphs) {
+            const blocks = [];
+            let current = null;
+
+            for (let i = 0; i < paragraphs.length; i++) {
+                const p = paragraphs[i];
+                const nextP = paragraphs[i + 1] ? paragraphs[i + 1].original : null;
+
+                if (!current) {
+                    current = { items: [p], isBreak: isParaBreak(p.original, nextP) };
+                } else if (current.isBreak) {
+                    // Previous block ended properly — start a new block
+                    blocks.push(current);
+                    current = { items: [p], isBreak: isParaBreak(p.original, nextP) };
+                } else {
+                    // Previous block did NOT end a sentence — merge this fragment in
+                    current.items.push(p);
+                    // Re-evaluate the break condition using the COMBINED text. 
+                    // This correctly pairs quotes that were opened in fragment A and closed in fragment B
+                    const combinedText = current.items.map(x => x.original).join(' ');
+                    current.isBreak = isParaBreak(combinedText, nextP);
+                }
+            }
+            if (current) blocks.push(current);
+            return blocks;
+        }
+
+        // Build word spans with real text-node spaces so justify works properly
+        function makeWordSpans(text, container) {
+            const words = text.split(/\s+/).filter(Boolean);
+            words.forEach((w, i) => {
+                const span = document.createElement('span');
+                span.className = 'word';
+                span.innerText = w;
+                container.appendChild(span);
+                // Real space text node — justify algorithm can stretch these
+                if (i < words.length - 1) {
+                    container.appendChild(document.createTextNode(' '));
+                }
+            });
+        }
+
+        function renderPage() {
+            els.pageContent.innerHTML = '';
+            els.titleDisplay.innerText = appState.title;
+
+            const page = appState.pages[appState.currentPage] || { paragraphs: [] };
+            const blocks = groupParagraphs(page.paragraphs);
+
+            blocks.forEach(block => {
+                const blockDiv = document.createElement('div');
+                blockDiv.className = 'paragraph-block';
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'paragraph-text';
+
+                // Combine ALL items in this block into one continuous string
+                const combinedOriginal = block.items.map(p => p.original).join(' ');
+
+                // Split the combined text into real sentences
+                const sentences = splitSentences(combinedOriginal);
+
+                sentences.forEach((sentence, sIdx) => {
+                    if (sIdx > 0) {
+                        textSpan.appendChild(document.createTextNode(' '));
+                    }
+                    const sentenceSpan = document.createElement('span');
+                    sentenceSpan.className = 'sentence';
+
+                    sentenceSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleSentenceClick(e, sentence);
+                    });
+
+                    makeWordSpans(sentence, sentenceSpan);
+                    textSpan.appendChild(sentenceSpan);
+                });
+
+                blockDiv.appendChild(textSpan);
+                els.pageContent.appendChild(blockDiv);
+            });
+
+            els.pageIndicator.innerText = `${appState.currentPage + 1} / ${appState.totalPages}`;
+            els.pageContent.scrollTop = 0;
+            updateSidebarUI();
+        }
+
+        // --- Sentence translation cache & on-demand translator ---
+        const sentenceTransCache = new Map();
+
+        async function translateSentence(sentence) {
+            const cacheKey = `${appState.targetLang}::${sentence}`;
+            if (sentenceTransCache.has(cacheKey)) return sentenceTransCache.get(cacheKey);
+
+            const response = await fetch('https://api.deepseek.com/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+                body: JSON.stringify({
+                    model: "deepseek-chat",
+                    messages: [
+                        { role: "system", content: `Translate the following sentence into ${appState.targetLang}. Output ONLY the translation, nothing else.` },
+                        { role: "user", content: sentence }
+                    ],
+                    temperature: 0.1,
+                    max_tokens: 400
+                })
+            });
+
+            const data = await response.json();
+            const translated = data.choices[0].message.content.trim();
+            sentenceTransCache.set(cacheKey, translated);
+            return translated;
+        }
+
+        // --- Sentence translation popover (left-click) ---
+        function handleSentenceClick(e, originalText) {
+            closePopover();
+            closeSentencePopover();
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const popover = els.sentencePopover;
+            popover.style.left = `${Math.max(10, Math.min(window.innerWidth - 430, rect.left))}px`;
+            popover.style.top = `${Math.min(window.innerHeight - 200, rect.bottom + 8)}px`;
+            popover.classList.remove('hidden');
+
+            els.sentenceOrigText.innerText = originalText;
+
+            // Check cache first for instant display
+            const cacheKey = `${appState.targetLang}::${originalText}`;
+            if (sentenceTransCache.has(cacheKey)) {
+                els.sentenceTransText.innerText = sentenceTransCache.get(cacheKey);
+            } else {
+                els.sentenceTransText.innerHTML = '<span class="animate-pulse opacity-50">Translating...</span>';
+                translateSentence(originalText).then(t => {
+                    // Only update if popover is still showing the same sentence
+                    if (els.sentenceOrigText.innerText === originalText) {
+                        els.sentenceTransText.innerText = t;
+                    }
+                }).catch(() => {
+                    if (els.sentenceOrigText.innerText === originalText) {
+                        els.sentenceTransText.innerText = 'Translation failed. Click again to retry.';
+                    }
+                });
+            }
+        }
+
+        function closeSentencePopover() { els.sentencePopover.classList.add('hidden'); }
+
+        // --- Word definition popover (right-click / long-press) ---
+        async function handleWordClick(e, word) {
+            closeSentencePopover();
+
+            const rect = (e.target || e.currentTarget).getBoundingClientRect();
+            els.wordPopover.style.left = `${Math.min(window.innerWidth - 250, rect.left)}px`;
+            els.wordPopover.style.top = `${rect.top + 25}px`;
+            els.wordPopover.classList.remove('hidden');
+            els.targetWord.innerText = word.replace(/[^\w]/g, '');
+            els.wordDefinition.innerText = "Consulting AI...";
+
+            try {
+                const response = await fetch('https://api.deepseek.com/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+                    body: JSON.stringify({
+                        model: "deepseek-chat",
+                        messages: [{ role: "user", content: `Briefly define word "${els.targetWord.innerText}" in context of ${appState.targetLang}.` }],
+                        max_tokens: 40
+                    })
+                });
+                const data = await response.json();
+                els.wordDefinition.innerText = data.choices[0].message.content.trim();
+            } catch(err) { els.wordDefinition.innerText = "Error fetching definition."; }
+        }
+
+        function closePopover() { els.wordPopover.classList.add('hidden'); }
+
+        // --- Global click: close popovers ---
+        window.addEventListener('click', (e) => {
+            if (!els.wordPopover.contains(e.target)) closePopover();
+            if (!els.sentencePopover.contains(e.target) && !e.target.closest('.sentence')) closeSentencePopover();
+        });
+
+        // --- Right-click on word (desktop) ---
+        els.pageContent.addEventListener('contextmenu', function(e) {
+            const wordSpan = e.target.closest('.word');
+            if (!wordSpan) return;
+            e.preventDefault();
+            handleWordClick(e, wordSpan.innerText);
+        });
+
+        // --- Long-press on word (iPad / touch) ---
+        let longPressTimer = null;
+        els.pageContent.addEventListener('touchstart', function(e) {
+            const wordSpan = e.target.closest('.word');
+            if (!wordSpan) return;
+            longPressTimer = setTimeout(() => {
+                longPressTimer = null;
+                handleWordClick({ target: wordSpan, currentTarget: wordSpan, stopPropagation() {} }, wordSpan.innerText);
+            }, 500);
+        }, { passive: true });
+        els.pageContent.addEventListener('touchend', function() {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        });
+        els.pageContent.addEventListener('touchmove', function() {
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        });
+
+        function changePage(delta) {
+            const next = appState.currentPage + delta;
+            if (next >= 0 && next < appState.totalPages) {
+                appState.currentPage = next;
+                renderPage();
+            }
+        }
+
+        function toggleBookmark() {
+            const page = appState.currentPage;
+            const idx = appState.bookmarks.indexOf(page);
+            if (idx === -1) appState.bookmarks.push(page);
+            else appState.bookmarks.splice(idx, 1);
+            appState.bookmarks.sort((a,b) => a-b);
+            updateSidebarUI();
+            saveBookToDB(appState);
+        }
+
+        function updateSidebarUI() {
+            els.bookmarkList.innerHTML = appState.bookmarks.length ? '' : '<li class="text-sm text-gray-400 p-2 italic text-center">No bookmarks</li>';
+            appState.bookmarks.forEach(p => {
+                const li = document.createElement('div');
+                li.className = "sidebar-item flex justify-between";
+                li.innerHTML = `<span>Page ${p + 1}</span> <span>🔖</span>`;
+                li.onclick = () => { appState.currentPage = p; renderPage(); };
+                els.bookmarkList.appendChild(li);
+            });
+
+            els.chapterList.innerHTML = appState.chapters.length ? '' : '<li class="text-sm text-gray-400 p-2 italic text-center">No chapters detected</li>';
+            appState.chapters.forEach(c => {
+                const li = document.createElement('div');
+                li.className = "sidebar-item truncate";
+                li.innerText = c.title;
+                li.onclick = () => {
+                    const page = c.page ?? 0;
+                    appState.currentPage = Math.max(0, Math.min(appState.totalPages - 1, page));
+                    renderPage();
+                };
+                els.chapterList.appendChild(li);
+            });
+
+            const bookmarked = appState.bookmarks.includes(appState.currentPage);
+            els.bookmarkBtn.classList.toggle('text-yellow-500', bookmarked);
+            els.bookmarkBtn.classList.toggle('text-gray-300', !bookmarked);
+        }
+
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</body>
+</html>
