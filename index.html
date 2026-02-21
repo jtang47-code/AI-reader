@@ -3,95 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepReader - AI Bilingual Library</title>
+    <title>LinguaLens - AI Bilingual Library</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-primary: #fdfbf7;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #f1f5f9;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --accent: #2563eb;
-            --border: #e2e8f0;
+            /* Claude-inspired Light Theme */
+            --bg-primary: #fdfaee;    /* Warm, soft off-white background */
+            --bg-secondary: #ffffff;  /* Pure white for cards/popovers */
+            --bg-tertiary: #f3f1e8;   /* Slightly darker beige for sidebar/hover */
+            --text-primary: #2d2d2d;  /* Muted dark black/charcoal */
+            --text-secondary: #6b6a68; /* Muted earthy gray */
+            --accent: #2d2d2d;        /* Dark accent instead of bright blue */
+            --border: #e6e4dc;        /* Soft borders */
         }
 
         body.dark {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #111827;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --accent: #60a5fa;
-            --border: #334155;
+            /* Claude-inspired Dark Theme */
+            --bg-primary: #1e1d1c;
+            --bg-secondary: #272625;
+            --bg-tertiary: #2a2928;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9c9a98;
+            --accent: #e8e6e3;
+            --border: #383736;
         }
 
         body {
             background-color: var(--bg-primary);
             color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', system-ui, sans-serif;
             transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* LOGO FONT */
+        .logo-text {
+            font-family: 'Newsreader', serif;
+            font-style: normal;
+            font-weight: 500;
         }
 
         /* BOOK TYPOGRAPHY */
         .book-text {
-            font-family: 'Crimson Pro', serif;
-            line-height: 1.6;
-            font-size: 1.2rem;
+            font-family: 'Newsreader', serif;
+            line-height: 1.7;
+            font-size: 1.15rem;
             color: var(--text-primary);
-
-            /* Only break words when absolutely necessary, never mid-character */
             overflow-wrap: break-word;
             word-break: normal;
             hyphens: none;
         }
 
-        /* Content Area should never scroll horizontally */
         #pageContent {
             overflow-x: hidden;
         }
 
-        /* PARAGRAPH LAYOUT */
-        /* A "paragraph block" groups one or more source fragments into a visual paragraph */
         .paragraph-block {
-            margin-bottom: 1.4em;
+            margin-bottom: 1.5em;
             display: block;
             width: 100%;
         }
 
-        /* Legacy wrapper kept for compat */
-        .paragraph-wrapper {
-            margin-bottom: 0;
-            display: inline;
-        }
-
-        /* IMMERSIVE MODE: Flows like a real book */
         .is-immersive .paragraph-block {
             text-align: justify;
             text-justify: inter-word;
         }
 
-        /* paragraph-text is inline so justify on parent applies to its line boxes */
         .paragraph-text {
             display: inline;
             white-space: normal;
         }
 
-        /* Clickable sentence span — inline so it flows within justified text */
+        /* Clickable sentence span */
         .sentence {
             cursor: pointer;
             display: inline;
-            border-radius: 2px;
-            transition: background-color 0.15s;
+            border-radius: 3px;
+            transition: background-color 0.2s;
         }
         .sentence:hover {
-            background-color: rgba(37, 99, 235, 0.06);
+            background-color: var(--bg-tertiary);
         }
         body.dark .sentence:hover {
-            background-color: rgba(96, 165, 250, 0.1);
+            background-color: rgba(255,255,255,0.05);
         }
 
         /* Sentence translation popover */
@@ -99,28 +95,28 @@
             background-color: var(--bg-secondary);
             color: var(--text-primary);
             border: 1px solid var(--border);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            box-shadow: 0 12px 30px -10px rgba(0,0,0,0.1);
             max-width: 420px;
             width: 90vw;
+            border-radius: 12px;
         }
         #sentencePopover .sentence-orig {
-            font-family: 'Crimson Pro', serif;
-            font-size: 0.95em;
+            font-family: 'Newsreader', serif;
+            font-size: 1.05em;
             line-height: 1.5;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
             border-bottom: 1px solid var(--border);
             color: var(--text-secondary);
         }
         #sentencePopover .sentence-trans {
             font-family: 'Inter', sans-serif;
             font-size: 0.9em;
-            color: var(--accent);
+            color: var(--text-primary);
             font-weight: 500;
-            line-height: 1.45;
+            line-height: 1.5;
         }
 
-        /* Interactive Words — NO margin; spacing handled by text nodes */
         .word {
             display: inline;
             -webkit-touch-callout: none;
@@ -137,29 +133,35 @@
         }
         .btn-theme:hover { background-color: var(--border); }
 
-        select {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
         .sidebar-item {
             cursor: pointer;
-            padding: 8px;
+            padding: 6px 10px;
+            margin-bottom: 2px;
             border-radius: 6px;
             font-size: 0.85rem;
-            transition: background 0.2s;
+            color: var(--text-secondary);
+            transition: all 0.2s;
         }
-        .sidebar-item:hover { background-color: var(--bg-secondary); color: var(--accent); }
+        .sidebar-item:hover { 
+            background-color: var(--bg-secondary); 
+            color: var(--text-primary); 
+        }
 
         #wordPopover {
             background-color: var(--bg-secondary);
             color: var(--text-primary);
             border: 1px solid var(--border);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            box-shadow: 0 12px 30px -10px rgba(0,0,0,0.1);
+            border-radius: 12px;
         }
 
         .hidden { display: none !important; }
+        
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -169,70 +171,66 @@
         const DEEPSEEK_API_KEY = "sk-6245d4a4a89b4bae9db311fd3d83d17c";
     </script>
 
-
-    <header class="h-16 flex-none bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center justify-between px-6 shadow-sm z-20">
+    <header class="h-16 flex-none bg-[var(--bg-primary)] border-b border-[var(--border)] flex items-center justify-between px-6 z-20 transition-colors duration-300">
         <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2 cursor-pointer" onclick="showLibrary()">
-                <span class="text-2xl">📚</span>
-                <h1 class="text-xl font-bold tracking-tight">DeepReader</h1>
-            </div>
-            <div class="h-6 w-px bg-gray-300 dark:bg-slate-700 mx-2"></div>
-            <div class="flex gap-2 items-center">
-                <button onclick="document.getElementById('uploadInput').click()" class="btn-theme text-xs px-3 py-1.5 rounded transition">+ New Book</button>
-                <select id="targetLang" class="text-xs px-2 py-1.5 rounded outline-none focus:border-blue-500 transition">
-                    <option value="English">To English</option>
-                    <option value="Spanish">To Spanish</option>
-                    <option value="French">To French</option>
-                    <option value="German">To German</option>
-                    <option value="Chinese">To Chinese</option>
-                    <option value="Japanese">To Japanese</option>
-                </select>
-
+            <button id="sidebarToggle" class="hidden p-2 -ml-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onclick="toggleSidebar()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div class="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] duration-300" onclick="showLibrary()">
+                <h1 class="text-xl font-medium tracking-tight logo-text text-[var(--text-primary)]">LinguaLens</h1>
             </div>
             <input type="file" id="uploadInput" accept=".pdf,.txt,.json" class="hidden">
         </div>
 
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-5">
             <div class="flex items-center gap-2">
-                <span class="text-xs uppercase font-bold text-gray-400">Aa</span>
-                <input type="range" id="fontSizeSlider" min="16" max="28" value="19" class="w-24">
+                <span class="text-[10px] uppercase font-semibold text-[var(--text-secondary)]">Aa</span>
+                <input type="range" id="fontSizeSlider" min="16" max="28" value="19" class="w-20 accent-[var(--text-primary)]">
             </div>
-            <div id="pageNavCtrl" class="hidden flex items-center gap-2 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg p-1">
-                <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded w-8 text-center transition">←</button>
-                <span id="pageIndicator" class="text-sm font-mono w-20 text-center">0 / 0</span>
-                <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded w-8 text-center transition">→</button>
+            <div id="pageNavCtrl" class="hidden flex items-center gap-1 bg-[var(--bg-tertiary)] rounded-md p-1 border border-[var(--border)]">
+                <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center transition">←</button>
+                <span id="pageIndicator" class="text-xs font-medium w-16 text-center text-[var(--text-secondary)]">0 / 0</span>
+                <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center transition">→</button>
             </div>
-            <button id="themeToggle" class="p-2 rounded-full btn-theme transition">🌗</button>
+            <button id="themeToggle" class="w-8 h-8 flex items-center justify-center rounded-full btn-theme transition text-sm">🌗</button>
         </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden relative">
-        <aside class="w-64 flex-none bg-[var(--bg-tertiary)] border-r border-[var(--border)] flex flex-col z-10">
-            <div class="flex border-b border-[var(--border)]">
-                <button id="tabChapters" onclick="switchSidebar('chapters')" class="flex-1 p-3 text-xs font-bold uppercase tracking-widest border-b-2 border-accent text-accent">Chapters</button>
-                <button id="tabBookmarks" onclick="switchSidebar('bookmarks')" class="flex-1 p-3 text-xs font-bold uppercase tracking-widest border-b-2 border-transparent text-gray-400">Bookmarks</button>
-            </div>
-            <div id="sidebarChapters" class="flex-1 overflow-y-auto p-2 space-y-1">
-                <li class="text-sm text-gray-400 p-2 italic text-center">No chapters found</li>
-            </div>
-            <div id="sidebarBookmarks" class="hidden flex-1 overflow-y-auto p-2 space-y-1">
-                <li class="text-sm text-gray-400 p-2 italic text-center">No bookmarks</li>
+        <!-- SIDEBAR -->
+        <aside id="mainSidebar" class="flex-none bg-[var(--bg-tertiary)] border-r border-transparent flex flex-col z-10 transition-all duration-300 ease-in-out w-0 opacity-0 overflow-hidden">
+            <div class="w-64 flex flex-col h-full">
+                <div class="p-4 pt-6">
+                    <h3 class="text-xs font-medium text-[var(--text-secondary)] mb-2 px-2">Bookmarks</h3>
+                    <div id="sidebarBookmarks" class="flex-1 overflow-y-auto space-y-0.5">
+                        <li class="text-xs text-[var(--text-secondary)] p-2 italic list-none">No bookmarks</li>
+                    </div>
+                </div>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-hidden relative bg-[var(--bg-primary)]" id="mainScroll">
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-hidden relative bg-[var(--bg-primary)] transition-all duration-300" id="mainScroll">
+            <!-- LIBRARY VIEW -->
             <div id="libraryView" class="absolute inset-0 z-10 bg-[var(--bg-primary)] p-8 overflow-y-auto">
-                <h2 class="text-3xl font-bold mb-2">My Library</h2>
-                <p class="text-[var(--text-secondary)] mb-8 font-medium">Click a book to resume reading.</p>
-                <div id="libraryGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+                <div class="max-w-6xl mx-auto">
+                    <!-- Claude-style Header -->
+                    <div class="flex items-center justify-center mt-12 mb-16">
+                        <h2 class="text-3xl md:text-4xl font-medium text-[var(--text-primary)] logo-text">Welcome to your library</h2>
+                    </div>
+
+                    <div id="libraryGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pb-12">
+                        <!-- Cards will be injected here -->
+                    </div>
+                </div>
             </div>
 
             <!-- READER VIEW -->
-            <div id="readerView" class="max-w-6xl mx-auto h-full flex flex-col hidden px-6 md:px-16 transition-all">
-                <div class="flex-none pt-8 flex justify-between items-end mb-6 border-b border-[var(--border)] pb-4">
-                    <h2 id="bookTitleDisplay" class="text-2xl font-bold font-serif line-clamp-1">Untitled</h2>
-                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-gray-300 hover:text-yellow-500 transition">
-                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v18l7-3 7 3V3H5z"/></svg>
+            <div id="readerView" class="max-w-4xl mx-auto h-full flex flex-col hidden px-6 md:px-12 transition-all">
+                <div class="flex-none pt-10 flex justify-between items-end mb-8 pb-4">
+                    <h2 id="bookTitleDisplay" class="text-2xl font-medium logo-text text-[var(--text-primary)] line-clamp-1">Untitled</h2>
+                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v18l7-3 7 3V3H5z"/></svg>
                     </button>
                 </div>
                 <div id="pageContent" class="flex-1 book-text is-immersive overflow-y-auto pr-2 pb-32 scroll-smooth"></div>
@@ -240,20 +238,44 @@
         </main>
     </div>
 
-    <!-- Word Definition Popover (right-click / long-press) -->
-    <div id="wordPopover" class="fixed z-[100] rounded-lg p-3 w-64 hidden transition-all">
-        <div class="flex justify-between items-start mb-1">
-            <span id="targetWord" class="font-bold text-blue-500">Word</span>
-            <button onclick="closePopover()" class="text-gray-400 hover:text-gray-600">×</button>
+    <!-- Add Book & Language Selection Modal -->
+    <div id="langModal" class="fixed inset-0 bg-black/20 z-[200] flex items-center justify-center hidden opacity-0 transition-opacity duration-200 backdrop-blur-sm">
+        <div class="bg-[var(--bg-secondary)] p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-[var(--border)] transform scale-95 transition-transform duration-200" id="langModalContent">
+            <h3 class="text-lg font-medium mb-1 text-[var(--text-primary)]">Book Settings</h3>
+            <p class="text-xs text-[var(--text-secondary)] mb-5">Select the target translation language for this text.</p>
+            
+            <select id="modalLangSelect" class="w-full p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm mb-6 outline-none focus:border-[var(--text-primary)] transition">
+                <option value="English">English</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Japanese">Japanese</option>
+            </select>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="cancelUpload()" class="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition">Cancel</button>
+                <button onclick="confirmUpload()" id="confirmUploadBtn" class="px-5 py-2 text-xs font-medium bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-lg hover:opacity-90 transition flex items-center justify-center min-w-[100px]">
+                    Import Book
+                </button>
+            </div>
         </div>
-        <div id="wordDefinition" class="text-sm text-[var(--text-secondary)] leading-tight">Loading...</div>
     </div>
 
-    <!-- Sentence Translation Popover (left-click) -->
-    <div id="sentencePopover" class="fixed z-[100] rounded-lg p-4 hidden transition-all">
+    <!-- Word Definition Popover -->
+    <div id="wordPopover" class="fixed z-[100] p-4 w-64 hidden transition-all">
         <div class="flex justify-between items-start mb-2">
-            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Translation</span>
-            <button onclick="closeSentencePopover()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            <span id="targetWord" class="font-medium text-[var(--text-primary)]">Word</span>
+            <button onclick="closePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
+        </div>
+        <div id="wordDefinition" class="text-xs text-[var(--text-secondary)] leading-relaxed">Loading...</div>
+    </div>
+
+    <!-- Sentence Translation Popover -->
+    <div id="sentencePopover" class="fixed z-[100] p-5 hidden transition-all">
+        <div class="flex justify-between items-start mb-3">
+            <span class="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-secondary)]">Translation</span>
+            <button onclick="closeSentencePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
         </div>
         <div class="sentence-orig" id="sentenceOrigText"></div>
         <div class="sentence-trans" id="sentenceTransText">Loading...</div>
@@ -263,25 +285,21 @@
         let appState = {
             id: null,
             title: "Untitled Book",
-
-            // NEW: preserve layout using pages -> paragraphs
-            pages: [], // [{ paragraphs: [{ original: "...", translation: null, paragraphId: "pX" }] }]
-
+            pages: [],
             bookmarks: [],
-            chapters: [],
             currentPage: 0,
             totalPages: 0,
             fontSize: 19,
             targetLang: "English",
-
             lastModified: Date.now()
         };
 
         let isDark = false;
-        let currentSidebar = 'chapters';
+        let isSidebarOpen = true; 
+        let pendingUploadFile = null;
 
         const DB_NAME = 'DeepReaderDB_v2';
-        const DB_VERSION = 2; // bumped due to schema change
+        const DB_VERSION = 2; 
         let db;
 
         const els = {
@@ -294,9 +312,9 @@
             pageIndicator: document.getElementById('pageIndicator'),
             bookmarkBtn: document.getElementById('bookmarkBtn'),
             bookmarkList: document.getElementById('sidebarBookmarks'),
-            chapterList: document.getElementById('sidebarChapters'),
+            sidebarToggle: document.getElementById('sidebarToggle'),
+            mainSidebar: document.getElementById('mainSidebar'),
             fontSizeSlider: document.getElementById('fontSizeSlider'),
-            targetLang: document.getElementById('targetLang'),
             wordPopover: document.getElementById('wordPopover'),
             targetWord: document.getElementById('targetWord'),
             wordDefinition: document.getElementById('wordDefinition'),
@@ -346,27 +364,30 @@
             });
         };
 
-        function switchSidebar(tab) {
-            currentSidebar = tab;
-            const isChapters = tab === 'chapters';
-            document.getElementById('tabChapters').classList.toggle('border-accent', isChapters);
-            document.getElementById('tabChapters').classList.toggle('text-accent', isChapters);
-            document.getElementById('tabBookmarks').classList.toggle('border-accent', !isChapters);
-            document.getElementById('tabBookmarks').classList.toggle('text-accent', !isChapters);
-            els.chapterList.classList.toggle('hidden', !isChapters);
-            els.bookmarkList.classList.toggle('hidden', isChapters);
-            updateSidebarUI();
+        function toggleSidebar() {
+            isSidebarOpen = !isSidebarOpen;
+            if(isSidebarOpen) {
+                els.mainSidebar.classList.remove('w-0', 'opacity-0', 'border-transparent');
+                els.mainSidebar.classList.add('w-64', 'opacity-100', 'border-[var(--border)]');
+            } else {
+                els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
+                els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]');
+            }
         }
 
         function applyReaderSettings() {
             els.pageContent.style.fontSize = `${appState.fontSize}px`;
-            els.targetLang.value = appState.targetLang;
             els.pageContent.classList.add('is-immersive');
         }
 
         function showLibrary() {
             els.readerView.classList.add('hidden');
             els.pageNavCtrl.classList.add('hidden');
+            
+            els.sidebarToggle.classList.add('hidden');
+            els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]');
+            els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
+            
             els.libraryView.classList.remove('hidden');
             renderLibrary();
         }
@@ -374,14 +395,33 @@
         async function renderLibrary() {
             const books = await getBooksFromDB();
             els.libraryGrid.innerHTML = '';
+
+            // 1. Add New Book Card Placeholder (Smaller sizes)
+            const addCard = document.createElement('div');
+            addCard.className = 'bg-[var(--bg-tertiary)] border border-dashed border-[var(--border)] rounded-xl p-3 cursor-pointer hover:bg-[var(--bg-secondary)] hover:border-[var(--text-primary)] transition-all flex flex-col items-center justify-center aspect-[3/4] group';
+            addCard.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform">+</div>
+                <h3 class="font-medium text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">Add Book</h3>
+            `;
+            addCard.onclick = () => document.getElementById('uploadInput').click();
+            els.libraryGrid.appendChild(addCard);
+
+            // 2. Render existing books (Smaller sizes)
             books.sort((a,b) => b.lastModified - a.lastModified).forEach(book => {
                 const totalPages = book.totalPages ?? (book.pages ? book.pages.length : 0);
+                const targetLanguage = book.targetLang || 'English';
+
                 const card = document.createElement('div');
-                card.className = 'bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-5 cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all flex flex-col aspect-[3/4] relative group';
+                card.className = 'bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-3 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all flex flex-col aspect-[3/4] relative group';
                 card.innerHTML = `
-                    <h3 class="font-bold text-lg mb-2 line-clamp-3">${book.title}</h3>
-                    <p class="text-sm text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
-                    <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-2 transition-all" onclick="event.stopPropagation(); deleteBook('${book.id}')">🗑️</button>
+                    <div class="absolute top-2 left-2 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-[var(--border)]">
+                        TO ${targetLanguage}
+                    </div>
+                    <button class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 bg-red-50 hover:bg-red-100 text-red-500 rounded p-1 transition-all z-10" onclick="event.stopPropagation(); deleteBook('${book.id}')">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                    <h3 class="font-medium text-xs mt-6 mb-1 line-clamp-3 leading-snug text-[var(--text-primary)]">${book.title}</h3>
+                    <p class="text-[9px] text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
                 `;
                 card.onclick = () => loadBook(book);
                 els.libraryGrid.appendChild(card);
@@ -395,11 +435,12 @@
         }
 
         function migrateOldBookIfNeeded(book) {
-            // If old schema exists (sentences-based), convert into pages with rough pagination
-            if (book.pages && Array.isArray(book.pages) && book.pages.length) return book;
+            if (book.pages && Array.isArray(book.pages) && book.pages.length) {
+                delete book.chapters; 
+                return book;
+            }
 
             if (Array.isArray(book.sentences) && book.sentences.length) {
-                // group by paragraphId, then chunk paragraphs into pages (fallback only)
                 const byPara = new Map();
                 book.sentences.forEach(s => {
                     const id = String(s.paragraphId ?? 0);
@@ -424,10 +465,10 @@
                 book.pages = pages;
                 book.totalPages = pages.length;
                 delete book.sentences;
+                delete book.chapters;
                 return book;
             }
 
-            // minimal fallback
             book.pages = book.pages || [];
             book.totalPages = book.pages.length || 0;
             return book;
@@ -437,19 +478,24 @@
             book = migrateOldBookIfNeeded(book);
             appState = book;
 
-            // Ensure derived fields
             appState.totalPages = appState.pages.length;
             appState.currentPage = Math.min(appState.currentPage || 0, Math.max(0, appState.totalPages - 1));
 
             els.libraryView.classList.add('hidden');
             els.readerView.classList.remove('hidden');
             els.pageNavCtrl.classList.remove('hidden');
+            els.sidebarToggle.classList.remove('hidden');
+            
+            isSidebarOpen = true;
+            els.mainSidebar.classList.remove('w-0', 'opacity-0', 'border-transparent', 'hidden');
+            els.mainSidebar.classList.add('w-64', 'opacity-100', 'border-[var(--border)]');
 
             applyReaderSettings();
             renderPage();
             updateSidebarUI();
         }
 
+        // --- UPLOAD WORKFLOW --- //
         document.getElementById('uploadInput').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -459,21 +505,70 @@
                 const book = migrateOldBookIfNeeded(JSON.parse(text));
                 await saveBookToDB(book);
                 loadBook(book);
+                document.getElementById('uploadInput').value = '';
                 return;
             }
 
-            if(!DEEPSEEK_API_KEY) return alert("Please set API Key in the script!");
+            if(!DEEPSEEK_API_KEY) return alert("Please set your API Key in the script first!");
 
-            // NEW: PDF preserves page layout
+            pendingUploadFile = file;
+            showModal();
+        });
+
+        function showModal() {
+            const m = document.getElementById('langModal');
+            const c = document.getElementById('langModalContent');
+            m.classList.remove('hidden');
+            void m.offsetWidth;
+            m.classList.remove('opacity-0');
+            c.classList.remove('scale-95');
+        }
+
+        function hideModal() {
+            const m = document.getElementById('langModal');
+            const c = document.getElementById('langModalContent');
+            m.classList.add('opacity-0');
+            c.classList.add('scale-95');
+            setTimeout(() => m.classList.add('hidden'), 200);
+        }
+
+        function cancelUpload() {
+            pendingUploadFile = null;
+            document.getElementById('uploadInput').value = ''; 
+            hideModal();
+        }
+
+        async function confirmUpload() {
+            if (!pendingUploadFile) return;
+            const file = pendingUploadFile;
+            const selectedLang = document.getElementById('modalLangSelect').value;
+            const btn = document.getElementById('confirmUploadBtn');
+
+            btn.innerHTML = `<svg class="animate-spin h-3 w-3 text-white mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Processing</span>`;
+            btn.disabled = true;
+
+            setTimeout(async () => {
+                try {
+                    await processBookUpload(file, selectedLang);
+                } catch (e) {
+                    console.error("Error processing file:", e);
+                    alert("There was an error processing the book.");
+                } finally {
+                    pendingUploadFile = null;
+                    document.getElementById('uploadInput').value = '';
+                    btn.innerHTML = `Import Book`;
+                    btn.disabled = false;
+                    hideModal();
+                }
+            }, 50);
+        }
+
+        async function processBookUpload(file, selectedLang) {
             let pages = [];
-            let chapters = [];
 
             if (file.name.toLowerCase().endsWith('.pdf')) {
-                const extracted = await extractPdfPagesWithParagraphs(file);
-                pages = extracted.pages;
-                chapters = extracted.chapters;
+                pages = await extractPdfPagesWithParagraphs(file);
             } else {
-                // TXT: keep paragraph structure; create virtual pages (fallback)
                 const text = await file.text();
                 const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 
@@ -487,16 +582,6 @@
                 for (let i = 0; i < paragraphObjs.length; i += P_PER_PAGE) {
                     pages.push({ paragraphs: paragraphObjs.slice(i, i + P_PER_PAGE) });
                 }
-
-                // crude chapter detection on paragraph starts
-                const chapterRegex = /^(chapter|capítulo|part|prologue|epilogue|section)\s*(\d+|[ivxlcm]+)?[:.]?\s*.*$/i;
-                paragraphObjs.forEach((p, i) => {
-                    if (chapterRegex.test(p.original) || (p.original === p.original.toUpperCase() && p.original.length < 60 && p.original.length > 3)) {
-                        // map paragraph to page index
-                        const pageIndex = Math.floor(i / P_PER_PAGE);
-                        chapters.push({ title: p.original.substring(0, 40), page: pageIndex });
-                    }
-                });
             }
 
             appState = {
@@ -504,28 +589,21 @@
                 title: file.name.replace(/\.[^/.]+$/, ""),
                 pages,
                 bookmarks: [],
-                chapters,
                 currentPage: 0,
                 totalPages: pages.length,
                 fontSize: 19,
-                targetLang: els.targetLang.value,
+                targetLang: selectedLang,
                 lastModified: Date.now()
             };
 
+            await saveBookToDB(appState);
             loadBook(appState);
-            saveBookToDB(appState);
-        });
+        }
 
-        // ------------------------------------------------------------
-        // PDF PAGE LAYOUT EXTRACTOR (preserves pages + paragraph placement)
-        // ------------------------------------------------------------
         async function extractPdfPagesWithParagraphs(file) {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
             const pages = [];
-            const chapters = [];
-            const chapterRegex = /^(chapter|capítulo|part|prologue|epilogue|section)\s*(\d+|[ivxlcm]+)?[:.]?\s*.*$/i;
 
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -538,16 +616,13 @@
                     w: item.width
                 }));
 
-                // Sort Top to Bottom, then Left to Right
                 items.sort((a, b) => {
                     if (Math.abs(a.y - b.y) > 5) return b.y - a.y;
                     return a.x - b.x;
                 });
 
-                // Build lines first (group by y)
                 const lines = [];
                 let currentLine = null;
-
                 const sameLine = (y1, y2) => Math.abs(y1 - y2) <= 3.5;
 
                 for (const it of items) {
@@ -561,7 +636,6 @@
                     currentLine.parts.push(it);
                 }
 
-                // Convert line parts into line strings with spacing/kerning
                 const lineObjs = lines.map(ln => {
                     ln.parts.sort((a,b) => a.x - b.x);
                     let lineText = '';
@@ -578,7 +652,6 @@
                     return { y: ln.y, text: lineText.replace(/\s+/g, ' ').trim() };
                 }).filter(l => l.text.length > 0);
 
-                // Group lines into paragraphs by vertical gaps
                 const paragraphs = [];
                 let curP = [];
                 for (let li = 0; li < lineObjs.length; li++) {
@@ -591,8 +664,6 @@
                     }
 
                     const gap = Math.abs(prev.y - cur.y);
-
-                    // Heuristic: bigger gap => new paragraph
                     if (gap > 12) {
                         paragraphs.push(curP);
                         curP = [cur];
@@ -602,34 +673,18 @@
                 }
                 if (curP.length) paragraphs.push(curP);
 
-                // Convert paragraphs into text blocks
                 const paragraphObjs = paragraphs
                     .map((pLines, pIdx) => {
-                        // Join lines within paragraph with spaces, but keep natural flow
                         let text = pLines.map(x => x.text).join(' ');
-                        // Hyphenation repair when PDF breaks words with hyphen at line end
                         text = text.replace(/-\s+/g, '');
                         text = text.replace(/\s+/g, ' ').trim();
-                        return {
-                            original: text,
-                            translation: null,
-                            paragraphId: `p${i}_${pIdx}`
-                        };
+                        return { original: text, translation: null, paragraphId: `p${i}_${pIdx}` };
                     })
                     .filter(p => p.original.length > 0);
-
-                // chapter detection from first few paragraphs of page
-                paragraphObjs.slice(0, 3).forEach(p => {
-                    if (chapterRegex.test(p.original) || (p.original === p.original.toUpperCase() && p.original.length < 60 && p.original.length > 3)) {
-                        chapters.push({ title: p.original.substring(0, 40), page: i - 1 });
-                    }
-                });
 
                 pages.push({ paragraphs: paragraphObjs });
             }
 
-            // --- Cross-Page Paragraph Merging ---
-            // Fixes the issue where PDF page boundaries split a sentence in half.
             for (let i = 0; i < pages.length; i++) {
                 if (i < pages.length - 1) {
                     let currentPage = pages[i];
@@ -639,7 +694,6 @@
                         let lastPara = currentPage.paragraphs[currentPage.paragraphs.length - 1];
                         let firstNextPara = nextPage.paragraphs[0];
 
-                        // If the last paragraph on the current page doesn't end a sentence, pull the next fragment
                         if (!isParaBreak(lastPara.original, firstNextPara.original)) {
                             lastPara.original += " " + firstNextPara.original;
                             nextPage.paragraphs.shift();
@@ -650,55 +704,30 @@
                 }
             }
 
-            // Clean up any empty pages and remap chapter pointers
             const finalPages = [];
-            const oldToNewIndex = new Map();
             for (let i = 0; i < pages.length; i++) {
                 if (pages[i].paragraphs.length > 0) {
-                    oldToNewIndex.set(i, finalPages.length);
                     finalPages.push(pages[i]);
-                } else {
-                    // If a page became empty (absorbed into previous), map its index to the previous page
-                    oldToNewIndex.set(i, Math.max(0, finalPages.length - 1));
                 }
             }
 
-            chapters.forEach(c => {
-                c.page = oldToNewIndex.get(c.page) ?? 0;
-            });
-
-            return { pages: finalPages, chapters };
+            return finalPages;
         }
-
 
         function splitSentences(text) {
             if (!text) return [];
             text = text.trim();
             if (!text) return [];
 
-            // Two-pass approach:
-            //
-            // 1) CJK sentence-enders (。！？…) optionally followed by closing
-            //    quotes/brackets — split immediately after them, no whitespace
-            //    or uppercase check needed (Chinese/Japanese/Korean don't have
-            //    uppercase, and sentences follow directly after punctuation).
-            //
-            // 2) Latin sentence-enders (.!?…) optionally followed by closing
-            //    quotes/brackets — split only when followed by whitespace then
-            //    an uppercase letter or opening quote (avoids breaking on
-            //    abbreviations like Mr., decimals like .30, etc.).
-
             const CJK_SPLIT  = /([。！？…\u3002\uff01\uff1f]["\u201d\u2019\uff09\u300d\u300f\u3011】）»]*)/g;
             const LATIN_SPLIT = /([.!?…]+["\'\u201d\u2019\)\]»]*)\s+(?=[A-Z\u00C0-\u024F\u0400-\u04FF\u4e00-\u9fff"\'\u201c\u2018\(\[«\u00a1\u00bf])/g;
 
-            // Detect if text is predominantly CJK
             const cjkCount = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef]/g) || []).length;
             const isCJK = cjkCount > text.length * 0.15;
 
             let parts = [];
 
             if (isCJK) {
-                // Split after every CJK sentence-ending punctuation
                 let lastIdx = 0;
                 let m;
                 CJK_SPLIT.lastIndex = 0;
@@ -707,20 +736,14 @@
                     const seg = text.slice(lastIdx, end).trim();
                     if (seg) parts.push(seg);
                     lastIdx = end;
-                    // skip optional whitespace between sentences
                     while (lastIdx < text.length && /\s/.test(text[lastIdx])) lastIdx++;
                 }
                 const tail = text.slice(lastIdx).trim();
                 if (tail) {
-                    if (parts.length > 0) {
-                        // Trailing fragment without punctuation → merge into last
-                        parts[parts.length - 1] += tail;
-                    } else {
-                        parts.push(tail);
-                    }
+                    if (parts.length > 0) parts[parts.length - 1] += tail;
+                    else parts.push(tail);
                 }
             } else {
-                // Latin / general: require uppercase after whitespace
                 let lastIdx = 0;
                 let m;
                 LATIN_SPLIT.lastIndex = 0;
@@ -733,17 +756,12 @@
                 }
                 const tail = text.slice(lastIdx).trim();
                 if (tail) {
-                    if (/[.!?…。！？]["\'\u201d\u2019\)\]»]*\s*$/.test(tail)) {
-                        parts.push(tail);
-                    } else if (parts.length > 0) {
-                        parts[parts.length - 1] += ' ' + tail;
-                    } else {
-                        parts.push(tail);
-                    }
+                    if (/[.!?…。！？]["\'\u201d\u2019\)\]»]*\s*$/.test(tail)) parts.push(tail);
+                    else if (parts.length > 0) parts[parts.length - 1] += ' ' + tail;
+                    else parts.push(tail);
                 }
             }
 
-            // Post-process: sub-split any overly long sentences for readability
             const MAX_SENTENCE_LEN = 300;
             const final = [];
             for (const s of parts) {
@@ -751,10 +769,8 @@
                     final.push(s);
                     continue;
                 }
-                // Try splitting on semicolons first
                 const semiParts = s.split(/;\s*/);
                 if (semiParts.length > 1 && semiParts.every(p => p.length > 20)) {
-                    // Rejoin semicolons into the segments (keep the ;)
                     const rebuilt = [];
                     for (let i = 0; i < semiParts.length; i++) {
                         rebuilt.push(i < semiParts.length - 1 ? semiParts[i] + ';' : semiParts[i]);
@@ -762,14 +778,13 @@
                     final.push(...rebuilt);
                     continue;
                 }
-                // Try splitting on comma + clause starters (conjunctions, participial phrases)
                 const clauseRe = /,\s+(?=(?:and|but|or|so|yet|for|nor|then|while|where|when|which|who|that|as|the|with|after|before|until|though|although|because|since|if|once|unless|he|she|they|it|his|her|their|we|I|you|Jack|Ennis|[A-Z][a-z]+['']s)\b)/g;
                 const clauseParts = [];
                 let lastI = 0;
                 let cm;
                 clauseRe.lastIndex = 0;
                 while ((cm = clauseRe.exec(s)) !== null) {
-                    const seg = s.slice(lastI, cm.index + 1).trim(); // include the comma
+                    const seg = s.slice(lastI, cm.index + 1).trim(); 
                     if (seg.length > 30) {
                         clauseParts.push(seg);
                         lastI = cm.index + 1;
@@ -778,63 +793,40 @@
                 }
                 const clauseTail = s.slice(lastI).trim();
                 if (clauseTail) {
-                    if (clauseParts.length > 0 && clauseTail.length < 40) {
-                        clauseParts[clauseParts.length - 1] += ' ' + clauseTail;
-                    } else {
-                        clauseParts.push(clauseTail);
-                    }
+                    if (clauseParts.length > 0 && clauseTail.length < 40) clauseParts[clauseParts.length - 1] += ' ' + clauseTail;
+                    else clauseParts.push(clauseTail);
                 }
-                if (clauseParts.length > 1) {
-                    final.push(...clauseParts);
-                } else {
-                    final.push(s); // give up, keep as-is
-                }
+                if (clauseParts.length > 1) final.push(...clauseParts);
+                else final.push(s); 
             }
 
             return final.length ? final : [text];
         }
 
-        // Determine if a paragraph text "closes" a paragraph (ends a sentence or is a standalone header)
-        // Passes `nextText` to perform lookahead checks
         function isParaBreak(text, nextText = null) {
             if (!text) return true;
             const t = text.trim();
 
-            // 1. Unclosed Opening Quotes: If there's an unclosed opening quote, this paragraph is NOT complete
-            // Curly quotes: count left vs right separately
             const curlyOpens  = (t.match(/\u201c/g) || []).length;
             const curlyCloses = (t.match(/\u201d/g) || []).length;
             if (curlyOpens > curlyCloses) return false;
-            // Straight double quotes: odd count = unclosed
             const straightDbl = (t.match(/"/g) || []).length;
             if (straightDbl % 2 !== 0) return false;
 
-            // 2. Hyphens/Dashes: Ends with a hyphen or dash (word/number split across fragments like ".30-")
             if (/[-\u2013\u2014]$/.test(t)) return false;
-
-            // 3. Comma Rule (CRITICAL FIX): If it ends with a comma (even if followed by a quote or bracket), 
-            // it's highly likely a continuation, not a sentence end.
             if (/[,，][ \u201d"'\)\]»]*$/.test(t)) return false;
 
-            // 4. Lookahead Context (CRITICAL FIX): If the very next fragment starts with a lowercase letter,
-            // it is overwhelmingly likely to be a continuation of the same sentence.
             if (nextText) {
                 const nt = nextText.trim();
-                // Check if starts with a lowercase letter (ignoring leading quotes/brackets)
                 if (/^["'\u2018\u201c\(\[]*[a-z]/.test(nt)) return false;
             }
 
-            // 5. Normal Endings: Ends with sentence-ending punctuation or closing quote
             if (/[.!?…\u201d"»。！？][ \u201d"'\)\]»]*$/.test(t)) return true;
-
-            // 6. Headers/Titles: Very short standalone text (title/header/attribution line)
             if (t.length < 60 && !/[,，]\s*$/.test(t)) return true;
 
             return false;
         }
 
-        // Group source paragraph objects into visual paragraph blocks
-        // Fragments that don't end a sentence get merged with the next fragment
         function groupParagraphs(paragraphs) {
             const blocks = [];
             let current = null;
@@ -846,14 +838,10 @@
                 if (!current) {
                     current = { items: [p], isBreak: isParaBreak(p.original, nextP) };
                 } else if (current.isBreak) {
-                    // Previous block ended properly — start a new block
                     blocks.push(current);
                     current = { items: [p], isBreak: isParaBreak(p.original, nextP) };
                 } else {
-                    // Previous block did NOT end a sentence — merge this fragment in
                     current.items.push(p);
-                    // Re-evaluate the break condition using the COMBINED text. 
-                    // This correctly pairs quotes that were opened in fragment A and closed in fragment B
                     const combinedText = current.items.map(x => x.original).join(' ');
                     current.isBreak = isParaBreak(combinedText, nextP);
                 }
@@ -862,7 +850,6 @@
             return blocks;
         }
 
-        // Build word spans with real text-node spaces so justify works properly
         function makeWordSpans(text, container) {
             const words = text.split(/\s+/).filter(Boolean);
             words.forEach((w, i) => {
@@ -870,10 +857,7 @@
                 span.className = 'word';
                 span.innerText = w;
                 container.appendChild(span);
-                // Real space text node — justify algorithm can stretch these
-                if (i < words.length - 1) {
-                    container.appendChild(document.createTextNode(' '));
-                }
+                if (i < words.length - 1) container.appendChild(document.createTextNode(' '));
             });
         }
 
@@ -891,16 +875,11 @@
                 const textSpan = document.createElement('span');
                 textSpan.className = 'paragraph-text';
 
-                // Combine ALL items in this block into one continuous string
                 const combinedOriginal = block.items.map(p => p.original).join(' ');
-
-                // Split the combined text into real sentences
                 const sentences = splitSentences(combinedOriginal);
 
                 sentences.forEach((sentence, sIdx) => {
-                    if (sIdx > 0) {
-                        textSpan.appendChild(document.createTextNode(' '));
-                    }
+                    if (sIdx > 0) textSpan.appendChild(document.createTextNode(' '));
                     const sentenceSpan = document.createElement('span');
                     sentenceSpan.className = 'sentence';
 
@@ -922,7 +901,6 @@
             updateSidebarUI();
         }
 
-        // --- Sentence translation cache & on-demand translator ---
         const sentenceTransCache = new Map();
 
         async function translateSentence(sentence) {
@@ -949,7 +927,6 @@
             return translated;
         }
 
-        // --- Sentence translation popover (left-click) ---
         function handleSentenceClick(e, originalText) {
             closePopover();
             closeSentencePopover();
@@ -962,28 +939,21 @@
 
             els.sentenceOrigText.innerText = originalText;
 
-            // Check cache first for instant display
             const cacheKey = `${appState.targetLang}::${originalText}`;
             if (sentenceTransCache.has(cacheKey)) {
                 els.sentenceTransText.innerText = sentenceTransCache.get(cacheKey);
             } else {
                 els.sentenceTransText.innerHTML = '<span class="animate-pulse opacity-50">Translating...</span>';
                 translateSentence(originalText).then(t => {
-                    // Only update if popover is still showing the same sentence
-                    if (els.sentenceOrigText.innerText === originalText) {
-                        els.sentenceTransText.innerText = t;
-                    }
+                    if (els.sentenceOrigText.innerText === originalText) els.sentenceTransText.innerText = t;
                 }).catch(() => {
-                    if (els.sentenceOrigText.innerText === originalText) {
-                        els.sentenceTransText.innerText = 'Translation failed. Click again to retry.';
-                    }
+                    if (els.sentenceOrigText.innerText === originalText) els.sentenceTransText.innerText = 'Translation failed. Click again to retry.';
                 });
             }
         }
 
         function closeSentencePopover() { els.sentencePopover.classList.add('hidden'); }
 
-        // --- Word definition popover (right-click / long-press) ---
         async function handleWordClick(e, word) {
             closeSentencePopover();
 
@@ -1011,13 +981,11 @@
 
         function closePopover() { els.wordPopover.classList.add('hidden'); }
 
-        // --- Global click: close popovers ---
         window.addEventListener('click', (e) => {
             if (!els.wordPopover.contains(e.target)) closePopover();
             if (!els.sentencePopover.contains(e.target) && !e.target.closest('.sentence')) closeSentencePopover();
         });
 
-        // --- Right-click on word (desktop) ---
         els.pageContent.addEventListener('contextmenu', function(e) {
             const wordSpan = e.target.closest('.word');
             if (!wordSpan) return;
@@ -1025,7 +993,6 @@
             handleWordClick(e, wordSpan.innerText);
         });
 
-        // --- Long-press on word (iPad / touch) ---
         let longPressTimer = null;
         els.pageContent.addEventListener('touchstart', function(e) {
             const wordSpan = e.target.closest('.word');
@@ -1061,7 +1028,7 @@
         }
 
         function updateSidebarUI() {
-            els.bookmarkList.innerHTML = appState.bookmarks.length ? '' : '<li class="text-sm text-gray-400 p-2 italic text-center">No bookmarks</li>';
+            els.bookmarkList.innerHTML = appState.bookmarks.length ? '' : '<li class="text-xs text-[var(--text-secondary)] p-2 italic list-none">No bookmarks</li>';
             appState.bookmarks.forEach(p => {
                 const li = document.createElement('div');
                 li.className = "sidebar-item flex justify-between";
@@ -1070,22 +1037,9 @@
                 els.bookmarkList.appendChild(li);
             });
 
-            els.chapterList.innerHTML = appState.chapters.length ? '' : '<li class="text-sm text-gray-400 p-2 italic text-center">No chapters detected</li>';
-            appState.chapters.forEach(c => {
-                const li = document.createElement('div');
-                li.className = "sidebar-item truncate";
-                li.innerText = c.title;
-                li.onclick = () => {
-                    const page = c.page ?? 0;
-                    appState.currentPage = Math.max(0, Math.min(appState.totalPages - 1, page));
-                    renderPage();
-                };
-                els.chapterList.appendChild(li);
-            });
-
             const bookmarked = appState.bookmarks.includes(appState.currentPage);
-            els.bookmarkBtn.classList.toggle('text-yellow-500', bookmarked);
-            els.bookmarkBtn.classList.toggle('text-gray-300', !bookmarked);
+            els.bookmarkBtn.classList.toggle('text-[#d97757]', bookmarked);
+            els.bookmarkBtn.classList.toggle('text-[var(--text-secondary)]', !bookmarked);
         }
 
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
