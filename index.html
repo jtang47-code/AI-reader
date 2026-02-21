@@ -162,6 +162,16 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+        /* Hide number input arrows */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -189,7 +199,10 @@
             </div>
             <div id="pageNavCtrl" class="hidden flex items-center gap-1 bg-[var(--bg-tertiary)] rounded-md p-1 border border-[var(--border)]">
                 <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center transition">←</button>
-                <span id="pageIndicator" class="text-xs font-medium w-16 text-center text-[var(--text-secondary)]">0 / 0</span>
+                <div class="flex items-center justify-center min-w-[3.5rem]">
+                    <input type="number" id="pageInput" class="w-7 text-center bg-transparent text-xs font-medium text-[var(--text-primary)] outline-none appearance-none" min="1">
+                    <span id="pageTotal" class="text-xs font-medium text-[var(--text-secondary)] pr-1">/ 0</span>
+                </div>
                 <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center transition">→</button>
             </div>
             <button id="themeToggle" class="w-8 h-8 flex items-center justify-center rounded-full btn-theme transition text-sm">🌗</button>
@@ -309,7 +322,8 @@
             pageContent: document.getElementById('pageContent'),
             titleDisplay: document.getElementById('bookTitleDisplay'),
             pageNavCtrl: document.getElementById('pageNavCtrl'),
-            pageIndicator: document.getElementById('pageIndicator'),
+            pageInput: document.getElementById('pageInput'),
+            pageTotal: document.getElementById('pageTotal'),
             bookmarkBtn: document.getElementById('bookmarkBtn'),
             bookmarkList: document.getElementById('sidebarBookmarks'),
             sidebarToggle: document.getElementById('sidebarToggle'),
@@ -362,6 +376,20 @@
                 isDark = !isDark;
                 document.body.classList.toggle('dark', isDark);
             });
+
+            // Handle jumping to a specific page
+            els.pageInput.addEventListener('change', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val)) {
+                    els.pageInput.value = appState.currentPage + 1;
+                    return;
+                }
+                val = Math.max(1, Math.min(val, appState.totalPages));
+                appState.currentPage = val - 1;
+                renderPage();
+            });
+            // Select all text when clicking the input for easy typing
+            els.pageInput.addEventListener('focus', (e) => e.target.select());
         };
 
         function toggleSidebar() {
@@ -896,7 +924,8 @@
                 els.pageContent.appendChild(blockDiv);
             });
 
-            els.pageIndicator.innerText = `${appState.currentPage + 1} / ${appState.totalPages}`;
+            els.pageInput.value = appState.currentPage + 1;
+            els.pageTotal.innerText = `/ ${appState.totalPages}`;
             els.pageContent.scrollTop = 0;
             updateSidebarUI();
         }
