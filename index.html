@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuraReader - AI Bilingual Library</title>
+    <title>AuraRead - AI Bilingual Library</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
@@ -189,7 +189,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div class="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] duration-300" onclick="showLibrary()">
-                <h1 class="text-xl font-medium tracking-tight logo-text text-[var(--text-primary)]">AuraReader</h1>
+                <h1 class="text-xl font-medium tracking-tight logo-text text-[var(--text-primary)]">AuraRead</h1>
             </div>
             <input type="file" id="uploadInput" accept=".pdf,.txt,.json" class="hidden">
         </div>
@@ -603,9 +603,10 @@
             els.pageNavCtrl.classList.remove('hidden');
             els.sidebarToggle.classList.remove('hidden');
             
-            isSidebarOpen = true;
-            els.mainSidebar.classList.remove('w-0', 'opacity-0', 'border-transparent', 'hidden');
-            els.mainSidebar.classList.add('w-64', 'opacity-100', 'border-[var(--border)]');
+            // Set sidebar to be collapsed by default when entering a book
+            isSidebarOpen = false;
+            els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]', 'hidden');
+            els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
 
             applyReaderSettings();
             renderPage();
