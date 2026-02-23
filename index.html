@@ -11,7 +11,19 @@
     <meta name="apple-mobile-web-app-title" content="AuraRead">
     <meta name="application-name" content="AuraRead">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#fdfaee">
+    <meta name="theme-color" content="#fdfaee" id="themeColorMeta">
+
+    <!-- Embedded Web App Manifest for Desktop PWA Installation -->
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22AuraRead%22%2C%22short_name%22%3A%22AuraRead%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23fdfaee%22%2C%22theme_color%22%3A%22%23fdfaee%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22icon.png%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fpng%22%2C%22purpose%22%3A%22any%20maskable%22%7D%2C%7B%22src%22%3A%22icon.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
+
+    <!-- Dummy Service Worker to satisfy Chrome's strict Desktop Install criteria -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            const swCode = "self.addEventListener('fetch', () => {});";
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+        }
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -20,13 +32,13 @@
     <style>
         :root {
             /* Claude-inspired Light Theme */
-            --bg-primary: #fdfaee;    /* Warm, soft off-white background */
-            --bg-secondary: #ffffff;  /* Pure white for cards/popovers */
-            --bg-tertiary: #f3f1e8;   /* Slightly darker beige for sidebar/hover */
-            --text-primary: #2d2d2d;  /* Muted dark black/charcoal */
-            --text-secondary: #6b6a68; /* Muted earthy gray */
-            --accent: #2d2d2d;        /* Dark accent instead of bright blue */
-            --border: #e6e4dc;        /* Soft borders */
+            --bg-primary: #fdfaee;    
+            --bg-secondary: #ffffff;  
+            --bg-tertiary: #f3f1e8;   
+            --text-primary: #2d2d2d;  
+            --text-secondary: #6b6a68; 
+            --accent: #2d2d2d;        
+            --border: #e6e4dc;        
         }
 
         body.dark {
@@ -44,7 +56,7 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             font-family: 'Inter', system-ui, sans-serif;
-            transition: background-color 0.3s, color 0.3s;
+            /* Transition removed from here and moved to Tailwind classes for perfect synchronization */
         }
 
         /* LOGO FONT */
@@ -185,7 +197,7 @@
         }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden transition-colors duration-300">
 
     <!-- CONFIGURATION AREA -->
     <script>
@@ -222,7 +234,7 @@
 
     <div class="flex flex-1 overflow-hidden relative">
         <!-- SIDEBAR -->
-        <aside id="mainSidebar" class="flex-none bg-[var(--bg-tertiary)] border-r border-transparent flex flex-col z-10 transition-all duration-300 ease-in-out w-0 opacity-0 overflow-hidden">
+        <aside id="mainSidebar" class="flex-none bg-[var(--bg-tertiary)] border-r border-transparent flex flex-col z-10 transition-all duration-300 w-0 opacity-0 overflow-hidden">
             <div class="w-64 flex flex-col h-full">
                 <div class="p-4 pt-6 flex flex-col h-full">
                     <!-- Library Button -->
@@ -241,9 +253,9 @@
         </aside>
 
         <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 overflow-hidden relative bg-[var(--bg-primary)] transition-all duration-300" id="mainScroll">
+        <main class="flex-1 overflow-hidden relative bg-[var(--bg-primary)] transition-colors duration-300" id="mainScroll">
             <!-- LIBRARY VIEW -->
-            <div id="libraryView" class="absolute inset-0 z-10 bg-[var(--bg-primary)] p-8 overflow-y-auto">
+            <div id="libraryView" class="absolute inset-0 z-10 bg-[var(--bg-primary)] p-8 overflow-y-auto transition-colors duration-300">
                 <div class="max-w-6xl mx-auto">
                     <!-- Claude-style Header -->
                     <div class="flex items-center justify-center mt-12 mb-16">
@@ -257,7 +269,7 @@
             </div>
 
             <!-- READER VIEW -->
-            <div id="readerView" class="max-w-4xl mx-auto h-full flex flex-col hidden px-6 md:px-12 transition-all">
+            <div id="readerView" class="max-w-4xl mx-auto h-full flex flex-col hidden px-6 md:px-12 transition-colors duration-300">
                 <div class="flex-none pt-10 flex justify-between items-end mb-8 pb-4">
                     <h2 id="bookTitleDisplay" class="text-2xl font-medium logo-text text-[var(--text-primary)] line-clamp-1">Untitled</h2>
                     <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition">
@@ -270,7 +282,7 @@
     </div>
 
     <!-- Right-Click Context Menu for Books -->
-    <div id="bookContextMenu" class="fixed z-[300] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg shadow-xl py-1 hidden w-32 transition-all">
+    <div id="bookContextMenu" class="fixed z-[300] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg shadow-xl py-1 hidden w-32 transition-colors duration-300">
         <button id="renameBookBtn" class="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors">Rename</button>
         <button id="deleteBookBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
     </div>
@@ -335,7 +347,7 @@
         };
 
         let isDark = false;
-        let isSidebarOpen = true; 
+        let isSidebarOpen = false; 
         let pendingUploadFile = null;
         let activeContextMenuBookId = null;
 
@@ -362,7 +374,8 @@
             wordDefinition: document.getElementById('wordDefinition'),
             sentencePopover: document.getElementById('sentencePopover'),
             sentenceOrigText: document.getElementById('sentenceOrigText'),
-            sentenceTransText: document.getElementById('sentenceTransText')
+            sentenceTransText: document.getElementById('sentenceTransText'),
+            themeColorMeta: document.getElementById('themeColorMeta')
         };
 
         function initDB() {
@@ -403,6 +416,8 @@
             document.getElementById('themeToggle').addEventListener('click', () => {
                 isDark = !isDark;
                 document.body.classList.toggle('dark', isDark);
+                // Dynamically update the app window theme color for PWAs
+                els.themeColorMeta.setAttribute('content', isDark ? '#1e1d1c' : '#fdfaee');
             });
 
             els.pageInput.addEventListener('change', (e) => {
@@ -438,7 +453,6 @@
         }
 
         function returnToLibrary() {
-            // Smoothly collapse sidebar before showing library
             isSidebarOpen = false;
             els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
             els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]');
@@ -544,13 +558,9 @@
                     <p class="text-[9px] text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
                 `;
                 
-                // Normal click -> Enter Book
                 card.onclick = () => loadBook(book);
-                
-                // Right Click -> Context Menu
                 card.oncontextmenu = (e) => showBookContextMenu(e, book.id);
                 
-                // Long Press -> Context Menu (Mobile)
                 let cardLongPressTimer;
                 card.addEventListener('touchstart', (e) => {
                     cardLongPressTimer = setTimeout(() => {
@@ -612,7 +622,6 @@
             els.pageNavCtrl.classList.remove('hidden');
             els.sidebarToggle.classList.remove('hidden');
             
-            // Set sidebar to be collapsed by default when entering a book
             isSidebarOpen = false;
             els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]', 'hidden');
             els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
@@ -646,7 +655,6 @@
             const m = document.getElementById('langModal');
             const c = document.getElementById('langModalContent');
             
-            // reset custom input
             document.getElementById('modalLangSelect').value = 'English';
             document.getElementById('customLangInput').classList.add('hidden');
             document.getElementById('customLangInput').value = '';
@@ -1072,7 +1080,6 @@
             const rect = e.currentTarget.getBoundingClientRect();
             const popover = els.sentencePopover;
             
-            // Render it hidden first to grab its true height based on text amount
             popover.classList.remove('hidden');
             popover.style.opacity = '0';
             
@@ -1081,12 +1088,9 @@
             const updatePosition = () => {
                 const popRect = popover.getBoundingClientRect();
                 
-                // Keep it horizontally centered-ish, but clamped to screen
                 popover.style.left = `${Math.max(10, Math.min(window.innerWidth - 430, rect.left))}px`;
                 
-                // Smart Bottom/Top positioning (Bug 6 Fix)
                 let topPos = rect.bottom + 8; 
-                // If it goes off the bottom of the screen, flip it above the sentence
                 if (topPos + popRect.height > window.innerHeight - 15) {
                     topPos = rect.top - popRect.height - 8;
                 }
@@ -1106,7 +1110,7 @@
                 translateSentence(originalText).then(t => {
                     if (els.sentenceOrigText.innerText === originalText) {
                         els.sentenceTransText.innerText = t;
-                        updatePosition(); // Re-measure size after translation finishes
+                        updatePosition(); 
                     }
                 }).catch(() => {
                     if (els.sentenceOrigText.innerText === originalText) els.sentenceTransText.innerText = 'Translation failed. Click again to retry.';
@@ -1128,7 +1132,6 @@
             els.targetWord.innerText = word.replace(/[^\w]/g, '');
             els.wordDefinition.innerText = "Consulting AI...";
 
-            // Smart Positioning
             setTimeout(() => {
                 const popRect = els.wordPopover.getBoundingClientRect();
                 let topPos = rect.bottom + 8;
@@ -1143,7 +1146,6 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
                     body: JSON.stringify({
                         model: "deepseek-chat",
-                        // Bug 1 Fix: Explicitly demand definition in target language
                         messages: [{ role: "user", content: `Provide a dictionary definition for the word "${els.targetWord.innerText}". The ENTIRE response MUST be written in ${appState.targetLang}. Do not use English unless the target language is English.` }],
                         max_tokens: 80
                     })
@@ -1151,7 +1153,6 @@
                 const data = await response.json();
                 els.wordDefinition.innerText = data.choices[0].message.content.trim();
                 
-                // Re-adjust height dynamically in case definition is long
                 const popRect = els.wordPopover.getBoundingClientRect();
                 let topPos = rect.bottom + 8;
                 if (topPos + popRect.height > window.innerHeight - 15) topPos = rect.top - popRect.height - 8;
@@ -1162,19 +1163,14 @@
 
         function closePopover() { els.wordPopover.classList.add('hidden'); }
 
-        // --- Outside Click / Touch Handling (Bug 5 Fix) --- //
         function handleOutsideInteractions(e) {
-            // Close Word Popover
             if (!els.wordPopover.contains(e.target)) closePopover();
-            // Close Sentence Popover
             if (!els.sentencePopover.contains(e.target) && !e.target.closest('.sentence')) closeSentencePopover();
-            // Close Context Menu
             const ctxMenu = document.getElementById('bookContextMenu');
             if (!ctxMenu.contains(e.target) && !e.target.closest('.book-card')) ctxMenu.classList.add('hidden');
         }
 
         window.addEventListener('click', handleOutsideInteractions);
-        // Explicitly catch touchstart on iPad to close popups immediately
         window.addEventListener('touchstart', handleOutsideInteractions, { passive: true });
 
 
@@ -1229,12 +1225,11 @@
                 els.bookmarkList.appendChild(li);
             });
 
-            // Bug 2 Fix: Force inline style update to bypass iOS Safari rendering lags
             const bookmarked = appState.bookmarks.includes(appState.currentPage);
             if (bookmarked) {
-                els.bookmarkBtn.style.color = '#d97757'; // Highlight color
+                els.bookmarkBtn.style.color = '#d97757'; 
             } else {
-                els.bookmarkBtn.style.color = ''; // Remove inline to fallback to CSS var
+                els.bookmarkBtn.style.color = ''; 
             }
         }
 
