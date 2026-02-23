@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinguaLens - AI Bilingual Library</title>
+    <title>AuraReader - AI Bilingual Library</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
@@ -99,6 +99,7 @@
             max-width: 420px;
             width: 90vw;
             border-radius: 12px;
+            z-index: 100;
         }
         #sentencePopover .sentence-orig {
             font-family: 'Newsreader', serif;
@@ -153,6 +154,7 @@
             border: 1px solid var(--border);
             box-shadow: 0 12px 30px -10px rgba(0,0,0,0.1);
             border-radius: 12px;
+            z-index: 100;
         }
 
         .hidden { display: none !important; }
@@ -187,7 +189,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div class="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] duration-300" onclick="showLibrary()">
-                <h1 class="text-xl font-medium tracking-tight logo-text text-[var(--text-primary)]">LinguaLens</h1>
+                <h1 class="text-xl font-medium tracking-tight logo-text text-[var(--text-primary)]">AuraReader</h1>
             </div>
             <input type="file" id="uploadInput" accept=".pdf,.txt,.json" class="hidden">
         </div>
@@ -213,8 +215,15 @@
         <!-- SIDEBAR -->
         <aside id="mainSidebar" class="flex-none bg-[var(--bg-tertiary)] border-r border-transparent flex flex-col z-10 transition-all duration-300 ease-in-out w-0 opacity-0 overflow-hidden">
             <div class="w-64 flex flex-col h-full">
-                <div class="p-4 pt-6">
-                    <h3 class="text-xs font-medium text-[var(--text-secondary)] mb-2 px-2">Bookmarks</h3>
+                <div class="p-4 pt-6 flex flex-col h-full">
+                    <!-- Library Button -->
+                    <button onclick="returnToLibrary()" class="flex items-center gap-3 w-full px-2 py-2 mb-6 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-lg transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Library
+                    </button>
+
+                    <!-- Bookmarks -->
+                    <h3 class="text-[10px] uppercase tracking-wider font-semibold text-[var(--text-secondary)] mb-2 px-2">Bookmarks</h3>
                     <div id="sidebarBookmarks" class="flex-1 overflow-y-auto space-y-0.5">
                         <li class="text-xs text-[var(--text-secondary)] p-2 italic list-none">No bookmarks</li>
                     </div>
@@ -251,22 +260,31 @@
         </main>
     </div>
 
+    <!-- Right-Click Context Menu for Books -->
+    <div id="bookContextMenu" class="fixed z-[300] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg shadow-xl py-1 hidden w-32 transition-all">
+        <button id="renameBookBtn" class="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors">Rename</button>
+        <button id="deleteBookBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
+    </div>
+
     <!-- Add Book & Language Selection Modal -->
     <div id="langModal" class="fixed inset-0 bg-black/20 z-[200] flex items-center justify-center hidden opacity-0 transition-opacity duration-200 backdrop-blur-sm">
         <div class="bg-[var(--bg-secondary)] p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-[var(--border)] transform scale-95 transition-transform duration-200" id="langModalContent">
             <h3 class="text-lg font-medium mb-1 text-[var(--text-primary)]">Book Settings</h3>
             <p class="text-xs text-[var(--text-secondary)] mb-5">Select the target translation language for this text.</p>
             
-            <select id="modalLangSelect" class="w-full p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm mb-6 outline-none focus:border-[var(--text-primary)] transition">
+            <select id="modalLangSelect" class="w-full p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm mb-3 outline-none focus:border-[var(--text-primary)] transition">
                 <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
                 <option value="French">French</option>
                 <option value="German">German</option>
                 <option value="Chinese">Chinese</option>
                 <option value="Japanese">Japanese</option>
+                <option value="Custom">Custom...</option>
             </select>
+
+            <input type="text" id="customLangInput" placeholder="Enter language (e.g. Esperanto)" class="hidden w-full p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm mb-6 outline-none focus:border-[var(--text-primary)] transition">
             
-            <div class="flex justify-end gap-2">
+            <div class="flex justify-end gap-2 mt-4">
                 <button onclick="cancelUpload()" class="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition">Cancel</button>
                 <button onclick="confirmUpload()" id="confirmUploadBtn" class="px-5 py-2 text-xs font-medium bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-lg hover:opacity-90 transition flex items-center justify-center min-w-[100px]">
                     Import Book
@@ -276,7 +294,7 @@
     </div>
 
     <!-- Word Definition Popover -->
-    <div id="wordPopover" class="fixed z-[100] p-4 w-64 hidden transition-all">
+    <div id="wordPopover" class="fixed p-4 w-64 hidden transition-opacity duration-200">
         <div class="flex justify-between items-start mb-2">
             <span id="targetWord" class="font-medium text-[var(--text-primary)]">Word</span>
             <button onclick="closePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
@@ -285,7 +303,7 @@
     </div>
 
     <!-- Sentence Translation Popover -->
-    <div id="sentencePopover" class="fixed z-[100] p-5 hidden transition-all">
+    <div id="sentencePopover" class="fixed p-5 hidden transition-opacity duration-200">
         <div class="flex justify-between items-start mb-3">
             <span class="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-secondary)]">Translation</span>
             <button onclick="closeSentencePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
@@ -310,6 +328,7 @@
         let isDark = false;
         let isSidebarOpen = true; 
         let pendingUploadFile = null;
+        let activeContextMenuBookId = null;
 
         const DB_NAME = 'DeepReaderDB_v2';
         const DB_VERSION = 2; 
@@ -377,7 +396,6 @@
                 document.body.classList.toggle('dark', isDark);
             });
 
-            // Handle jumping to a specific page
             els.pageInput.addEventListener('change', (e) => {
                 let val = parseInt(e.target.value);
                 if (isNaN(val)) {
@@ -388,8 +406,15 @@
                 appState.currentPage = val - 1;
                 renderPage();
             });
-            // Select all text when clicking the input for easy typing
             els.pageInput.addEventListener('focus', (e) => e.target.select());
+
+            document.getElementById('modalLangSelect').addEventListener('change', (e) => {
+                if(e.target.value === 'Custom') {
+                    document.getElementById('customLangInput').classList.remove('hidden');
+                } else {
+                    document.getElementById('customLangInput').classList.add('hidden');
+                }
+            });
         };
 
         function toggleSidebar() {
@@ -401,6 +426,17 @@
                 els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
                 els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]');
             }
+        }
+
+        function returnToLibrary() {
+            // Smoothly collapse sidebar before showing library
+            isSidebarOpen = false;
+            els.mainSidebar.classList.add('w-0', 'opacity-0', 'border-transparent');
+            els.mainSidebar.classList.remove('w-64', 'opacity-100', 'border-[var(--border)]');
+            
+            setTimeout(() => {
+                showLibrary();
+            }, 300);
         }
 
         function applyReaderSettings() {
@@ -420,11 +456,62 @@
             renderLibrary();
         }
 
+        // --- CONTEXT MENU LOGIC --- //
+        function showBookContextMenu(e, bookId) {
+            e.preventDefault();
+            activeContextMenuBookId = bookId;
+            const menu = document.getElementById('bookContextMenu');
+            
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            }
+
+            const menuWidth = 128; 
+            let left = clientX;
+            if (left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 10;
+            
+            menu.style.left = `${left}px`;
+            menu.style.top = `${clientY}px`;
+            menu.classList.remove('hidden');
+        }
+
+        document.getElementById('renameBookBtn').onclick = () => {
+            document.getElementById('bookContextMenu').classList.add('hidden');
+            if(!activeContextMenuBookId) return;
+            
+            const newName = prompt("Enter new name for the book:");
+            if(newName && newName.trim()) {
+                const transaction = db.transaction(['books'], 'readwrite');
+                const store = transaction.objectStore('books');
+                const request = store.get(activeContextMenuBookId);
+                request.onsuccess = (e) => {
+                    const book = e.target.result;
+                    book.title = newName.trim();
+                    store.put(book).onsuccess = () => renderLibrary();
+                };
+            }
+        };
+
+        document.getElementById('deleteBookBtn').onclick = () => {
+            document.getElementById('bookContextMenu').classList.add('hidden');
+            if(!activeContextMenuBookId) return;
+            
+            if(confirm('Permanently delete this book?')) {
+                const transaction = db.transaction(['books'], 'readwrite');
+                transaction.objectStore('books').delete(activeContextMenuBookId).onsuccess = () => renderLibrary();
+            }
+        };
+
         async function renderLibrary() {
             const books = await getBooksFromDB();
             els.libraryGrid.innerHTML = '';
 
-            // 1. Add New Book Card Placeholder (Smaller sizes)
             const addCard = document.createElement('div');
             addCard.className = 'bg-[var(--bg-tertiary)] border border-dashed border-[var(--border)] rounded-xl p-3 cursor-pointer hover:bg-[var(--bg-secondary)] hover:border-[var(--text-primary)] transition-all flex flex-col items-center justify-center aspect-[3/4] group';
             addCard.innerHTML = `
@@ -434,32 +521,39 @@
             addCard.onclick = () => document.getElementById('uploadInput').click();
             els.libraryGrid.appendChild(addCard);
 
-            // 2. Render existing books (Smaller sizes)
             books.sort((a,b) => b.lastModified - a.lastModified).forEach(book => {
                 const totalPages = book.totalPages ?? (book.pages ? book.pages.length : 0);
                 const targetLanguage = book.targetLang || 'English';
 
                 const card = document.createElement('div');
-                card.className = 'bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-3 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all flex flex-col aspect-[3/4] relative group';
+                card.className = 'book-card bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-3 cursor-pointer hover:-translate-y-1 hover:shadow-md transition-all flex flex-col aspect-[3/4] relative group';
                 card.innerHTML = `
                     <div class="absolute top-2 left-2 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-[var(--border)]">
                         TO ${targetLanguage}
                     </div>
-                    <button class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 bg-red-50 hover:bg-red-100 text-red-500 rounded p-1 transition-all z-10" onclick="event.stopPropagation(); deleteBook('${book.id}')">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
                     <h3 class="font-medium text-xs mt-6 mb-1 line-clamp-3 leading-snug text-[var(--text-primary)]">${book.title}</h3>
                     <p class="text-[9px] text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
                 `;
+                
+                // Normal click -> Enter Book
                 card.onclick = () => loadBook(book);
+                
+                // Right Click -> Context Menu
+                card.oncontextmenu = (e) => showBookContextMenu(e, book.id);
+                
+                // Long Press -> Context Menu (Mobile)
+                let cardLongPressTimer;
+                card.addEventListener('touchstart', (e) => {
+                    cardLongPressTimer = setTimeout(() => {
+                        showBookContextMenu(e, book.id);
+                        cardLongPressTimer = null;
+                    }, 500);
+                }, {passive: true});
+                card.addEventListener('touchend', () => { if(cardLongPressTimer) clearTimeout(cardLongPressTimer); });
+                card.addEventListener('touchmove', () => { if(cardLongPressTimer) clearTimeout(cardLongPressTimer); });
+
                 els.libraryGrid.appendChild(card);
             });
-        }
-
-        async function deleteBook(id) {
-            if(!confirm('Permanently delete this book?')) return;
-            const transaction = db.transaction(['books'], 'readwrite');
-            transaction.objectStore('books').delete(id).onsuccess = () => renderLibrary();
         }
 
         function migrateOldBookIfNeeded(book) {
@@ -467,7 +561,6 @@
                 delete book.chapters; 
                 return book;
             }
-
             if (Array.isArray(book.sentences) && book.sentences.length) {
                 const byPara = new Map();
                 book.sentences.forEach(s => {
@@ -475,7 +568,6 @@
                     if (!byPara.has(id)) byPara.set(id, []);
                     byPara.get(id).push(s);
                 });
-
                 const paraList = Array.from(byPara.entries())
                     .sort((a,b) => Number(a[0]) - Number(b[0]))
                     .map(([pid, arr], idx) => ({
@@ -483,20 +575,17 @@
                         translation: null,
                         paragraphId: `m${pid}`
                     }));
-
                 const P_PER_PAGE = 6;
                 const pages = [];
                 for (let i = 0; i < paraList.length; i += P_PER_PAGE) {
                     pages.push({ paragraphs: paraList.slice(i, i + P_PER_PAGE) });
                 }
-
                 book.pages = pages;
                 book.totalPages = pages.length;
                 delete book.sentences;
                 delete book.chapters;
                 return book;
             }
-
             book.pages = book.pages || [];
             book.totalPages = book.pages.length || 0;
             return book;
@@ -546,6 +635,12 @@
         function showModal() {
             const m = document.getElementById('langModal');
             const c = document.getElementById('langModalContent');
+            
+            // reset custom input
+            document.getElementById('modalLangSelect').value = 'English';
+            document.getElementById('customLangInput').classList.add('hidden');
+            document.getElementById('customLangInput').value = '';
+
             m.classList.remove('hidden');
             void m.offsetWidth;
             m.classList.remove('opacity-0');
@@ -569,7 +664,11 @@
         async function confirmUpload() {
             if (!pendingUploadFile) return;
             const file = pendingUploadFile;
-            const selectedLang = document.getElementById('modalLangSelect').value;
+            
+            const selectVal = document.getElementById('modalLangSelect').value;
+            const customVal = document.getElementById('customLangInput').value.trim();
+            const selectedLang = (selectVal === 'Custom' && customVal) ? customVal : (selectVal === 'Custom' ? 'English' : selectVal);
+            
             const btn = document.getElementById('confirmUploadBtn');
 
             btn.innerHTML = `<svg class="animate-spin h-3 w-3 text-white mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Processing</span>`;
@@ -962,19 +1061,43 @@
 
             const rect = e.currentTarget.getBoundingClientRect();
             const popover = els.sentencePopover;
-            popover.style.left = `${Math.max(10, Math.min(window.innerWidth - 430, rect.left))}px`;
-            popover.style.top = `${Math.min(window.innerHeight - 200, rect.bottom + 8)}px`;
+            
+            // Render it hidden first to grab its true height based on text amount
             popover.classList.remove('hidden');
-
+            popover.style.opacity = '0';
+            
             els.sentenceOrigText.innerText = originalText;
+
+            const updatePosition = () => {
+                const popRect = popover.getBoundingClientRect();
+                
+                // Keep it horizontally centered-ish, but clamped to screen
+                popover.style.left = `${Math.max(10, Math.min(window.innerWidth - 430, rect.left))}px`;
+                
+                // Smart Bottom/Top positioning (Bug 6 Fix)
+                let topPos = rect.bottom + 8; 
+                // If it goes off the bottom of the screen, flip it above the sentence
+                if (topPos + popRect.height > window.innerHeight - 15) {
+                    topPos = rect.top - popRect.height - 8;
+                }
+                
+                popover.style.top = `${topPos}px`;
+                popover.style.opacity = '1';
+            };
 
             const cacheKey = `${appState.targetLang}::${originalText}`;
             if (sentenceTransCache.has(cacheKey)) {
                 els.sentenceTransText.innerText = sentenceTransCache.get(cacheKey);
+                updatePosition();
             } else {
                 els.sentenceTransText.innerHTML = '<span class="animate-pulse opacity-50">Translating...</span>';
+                updatePosition();
+                
                 translateSentence(originalText).then(t => {
-                    if (els.sentenceOrigText.innerText === originalText) els.sentenceTransText.innerText = t;
+                    if (els.sentenceOrigText.innerText === originalText) {
+                        els.sentenceTransText.innerText = t;
+                        updatePosition(); // Re-measure size after translation finishes
+                    }
                 }).catch(() => {
                     if (els.sentenceOrigText.innerText === originalText) els.sentenceTransText.innerText = 'Translation failed. Click again to retry.';
                 });
@@ -988,10 +1111,21 @@
 
             const rect = (e.target || e.currentTarget).getBoundingClientRect();
             els.wordPopover.style.left = `${Math.min(window.innerWidth - 250, rect.left)}px`;
-            els.wordPopover.style.top = `${rect.top + 25}px`;
+            
             els.wordPopover.classList.remove('hidden');
+            els.wordPopover.style.opacity = '0';
+            
             els.targetWord.innerText = word.replace(/[^\w]/g, '');
             els.wordDefinition.innerText = "Consulting AI...";
+
+            // Smart Positioning
+            setTimeout(() => {
+                const popRect = els.wordPopover.getBoundingClientRect();
+                let topPos = rect.bottom + 8;
+                if (topPos + popRect.height > window.innerHeight - 15) topPos = rect.top - popRect.height - 8;
+                els.wordPopover.style.top = `${topPos}px`;
+                els.wordPopover.style.opacity = '1';
+            }, 0);
 
             try {
                 const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -999,21 +1133,40 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
                     body: JSON.stringify({
                         model: "deepseek-chat",
-                        messages: [{ role: "user", content: `Briefly define word "${els.targetWord.innerText}" in context of ${appState.targetLang}.` }],
-                        max_tokens: 40
+                        // Bug 1 Fix: Explicitly demand definition in target language
+                        messages: [{ role: "user", content: `Provide a dictionary definition for the word "${els.targetWord.innerText}". The ENTIRE response MUST be written in ${appState.targetLang}. Do not use English unless the target language is English.` }],
+                        max_tokens: 80
                     })
                 });
                 const data = await response.json();
                 els.wordDefinition.innerText = data.choices[0].message.content.trim();
+                
+                // Re-adjust height dynamically in case definition is long
+                const popRect = els.wordPopover.getBoundingClientRect();
+                let topPos = rect.bottom + 8;
+                if (topPos + popRect.height > window.innerHeight - 15) topPos = rect.top - popRect.height - 8;
+                els.wordPopover.style.top = `${topPos}px`;
+
             } catch(err) { els.wordDefinition.innerText = "Error fetching definition."; }
         }
 
         function closePopover() { els.wordPopover.classList.add('hidden'); }
 
-        window.addEventListener('click', (e) => {
+        // --- Outside Click / Touch Handling (Bug 5 Fix) --- //
+        function handleOutsideInteractions(e) {
+            // Close Word Popover
             if (!els.wordPopover.contains(e.target)) closePopover();
+            // Close Sentence Popover
             if (!els.sentencePopover.contains(e.target) && !e.target.closest('.sentence')) closeSentencePopover();
-        });
+            // Close Context Menu
+            const ctxMenu = document.getElementById('bookContextMenu');
+            if (!ctxMenu.contains(e.target) && !e.target.closest('.book-card')) ctxMenu.classList.add('hidden');
+        }
+
+        window.addEventListener('click', handleOutsideInteractions);
+        // Explicitly catch touchstart on iPad to close popups immediately
+        window.addEventListener('touchstart', handleOutsideInteractions, { passive: true });
+
 
         els.pageContent.addEventListener('contextmenu', function(e) {
             const wordSpan = e.target.closest('.word');
@@ -1066,9 +1219,13 @@
                 els.bookmarkList.appendChild(li);
             });
 
+            // Bug 2 Fix: Force inline style update to bypass iOS Safari rendering lags
             const bookmarked = appState.bookmarks.includes(appState.currentPage);
-            els.bookmarkBtn.classList.toggle('text-[#d97757]', bookmarked);
-            els.bookmarkBtn.classList.toggle('text-[var(--text-secondary)]', !bookmarked);
+            if (bookmarked) {
+                els.bookmarkBtn.style.color = '#d97757'; // Highlight color
+            } else {
+                els.bookmarkBtn.style.color = ''; // Remove inline to fallback to CSS var
+            }
         }
 
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
