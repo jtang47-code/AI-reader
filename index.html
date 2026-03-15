@@ -77,6 +77,29 @@
             font-family: 'Inter', system-ui, sans-serif;
         }
 
+        /* Keep shell transitions smooth, but make dense reading text switch instantly on iPad */
+        #pageContent,
+        #pageContent .paragraph-block,
+        #pageContent .paragraph-text,
+        #pageContent .sentence,
+        #pageContent .word,
+        #pageContent .word *,
+        #pageContent .sentence * {
+            transition: none !important;
+        }
+
+        /* Bookmark icon should feel immediate on touch devices */
+        #bookmarkBtn,
+        #bookmarkBtn svg,
+        #bookmarkBtn path {
+            transition: color 120ms ease, fill 120ms ease, stroke 120ms ease, transform 120ms ease !important;
+            will-change: transform;
+        }
+
+        #bookmarkBtn.is-active {
+            color: #d97757;
+        }
+
         /* FORCE FLUID THEME TRANSITIONS WITHOUT IPAD CPU LAG */
         /* Explicitly target layout elements. Bypassing spans fixes iPad rendering freezes */
         div, header, main, aside, nav, button, input, select, h1, h2, h3, p, svg, path, a, li {
@@ -498,9 +521,11 @@
             });
             document.getElementById('themeToggle').addEventListener('click', () => {
                 isDark = !isDark;
-                document.body.classList.toggle('dark', isDark);
-                // Dynamically update the app window theme color for PWAs
-                els.themeColorMeta.setAttribute('content', isDark ? '#1e1d1c' : '#fdfaee');
+                requestAnimationFrame(() => {
+                    document.body.classList.toggle('dark', isDark);
+                    // Dynamically update the app window theme color for PWAs
+                    els.themeColorMeta.setAttribute('content', isDark ? '#1e1d1c' : '#fdfaee');
+                });
             });
 
             els.pageInput.addEventListener('change', (e) => {
@@ -1421,12 +1446,14 @@
             if (idx === -1) appState.bookmarks.push(page);
             else appState.bookmarks.splice(idx, 1);
             appState.bookmarks.sort((a,b) => a-b);
-            updateSidebarUI();
+
+            requestAnimationFrame(() => {
+                updateSidebarUI();
+                els.bookmarkBtn.style.transform = 'scale(1.12)';
+                setTimeout(() => { els.bookmarkBtn.style.transform = ''; }, 120);
+            });
+
             saveBookToDB(appState);
-            
-            // Add quick visual tactile feedback specifically for iPads bypassing the 300ms transition
-            els.bookmarkBtn.style.transform = 'scale(1.15)';
-            setTimeout(() => { els.bookmarkBtn.style.transform = ''; }, 150);
         }
 
         function updateSidebarUI() {
@@ -1440,11 +1467,7 @@
             });
 
             const bookmarked = appState.bookmarks.includes(appState.currentPage);
-            if (bookmarked) {
-                els.bookmarkBtn.style.color = '#d97757'; 
-            } else {
-                els.bookmarkBtn.style.color = ''; 
-            }
+            els.bookmarkBtn.classList.toggle('is-active', bookmarked);
         }
 
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
