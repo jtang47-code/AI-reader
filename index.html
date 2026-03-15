@@ -77,11 +77,25 @@
             font-family: 'Inter', system-ui, sans-serif;
         }
 
-        /* FORCE FLUID THEME TRANSITIONS WITHOUT CPU LAG */
-        /* Target all elements but EXCLUDE the thousands of individual .word spans. */
-        /* The words will instantly inherit their parent's fading color, eliminating CPU freeze. */
-        *:not(.word) {
+        /* FORCE FLUID THEME TRANSITIONS WITHOUT IPAD CPU LAG */
+        /* Explicitly target layout elements. Bypassing spans fixes iPad rendering freezes */
+        div, header, main, aside, nav, button, input, select, h1, h2, h3, p, svg, path, a, li {
             transition-property: background-color, border-color, color, fill, stroke, accent-color, box-shadow;
+            transition-duration: 300ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Immediately inherit color for thousands of words to save iPad CPU */
+        span:not(.sentence) {
+            transition: none !important;
+        }
+        /* Safely restore hover animation for sentences */
+        span.sentence {
+            transition: background-color 200ms ease;
+        }
+
+        /* FORCE TAILWIND UTILITIES TO SYNC WITH 300MS THEME FADE */
+        .transition, .transition-all, .transition-colors, .transition-opacity, .transition-transform {
             transition-duration: 300ms !important;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
@@ -198,6 +212,7 @@
             border-radius: 6px;
             font-size: 0.85rem;
             color: var(--text-secondary);
+            touch-action: manipulation; /* Removes iOS 300ms tap delay */
         }
         .sidebar-item:hover { 
             background-color: var(--bg-secondary); 
@@ -271,7 +286,7 @@
 
     <header class="h-16 flex-none bg-[var(--bg-primary)] border-b border-[var(--border)] flex items-center justify-between px-6 z-20">
         <div class="flex items-center gap-4">
-            <button id="sidebarToggle" class="hidden p-2 -ml-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onclick="toggleSidebar()">
+            <button id="sidebarToggle" class="hidden p-2 -ml-2 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]" onclick="toggleSidebar()" style="touch-action: manipulation;">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div class="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]" onclick="showLibrary()">
@@ -287,14 +302,14 @@
                 <input type="range" id="fontSizeSlider" min="16" max="28" value="19" class="w-20">
             </div>
             <div id="pageNavCtrl" class="hidden flex items-center gap-1 bg-[var(--bg-tertiary)] rounded-md p-1 border border-[var(--border)]">
-                <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center">←</button>
+                <button onclick="changePage(-1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center" style="touch-action: manipulation;">←</button>
                 <div class="flex items-center justify-center min-w-[3.5rem]">
                     <input type="number" id="pageInput" class="w-7 text-center bg-transparent text-xs font-medium text-[var(--text-primary)] outline-none appearance-none" min="1">
                     <span id="pageTotal" class="text-xs font-medium text-[var(--text-secondary)] pr-1">/ 0</span>
                 </div>
-                <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center">→</button>
+                <button onclick="changePage(1)" class="p-1 hover:bg-[var(--bg-secondary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] w-7 text-center" style="touch-action: manipulation;">→</button>
             </div>
-            <button id="themeToggle" class="w-8 h-8 flex items-center justify-center rounded-full btn-theme text-sm">🌗</button>
+            <button id="themeToggle" class="w-8 h-8 flex items-center justify-center rounded-full btn-theme text-sm" style="touch-action: manipulation;">🌗</button>
         </div>
     </header>
 
@@ -304,7 +319,7 @@
             <div class="w-64 flex flex-col h-full">
                 <div class="p-4 pt-6 flex flex-col h-full">
                     <!-- Library Button -->
-                    <button onclick="returnToLibrary()" class="flex items-center gap-3 w-full px-2 py-2 mb-6 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-lg">
+                    <button onclick="returnToLibrary()" class="flex items-center gap-3 w-full px-2 py-2 mb-6 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] rounded-lg" style="touch-action: manipulation;">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                         Back to Library
                     </button>
@@ -338,7 +353,9 @@
             <div id="readerView" class="max-w-4xl mx-auto h-full flex flex-col hidden px-6 md:px-12">
                 <div class="flex-none pt-10 flex justify-between items-end mb-8 pb-4 border-b border-transparent">
                     <h2 id="bookTitleDisplay" class="text-2xl font-medium logo-text text-[var(--text-primary)] line-clamp-1">Untitled</h2>
-                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                    
+                    <!-- iPad Bookmark Fix: touch-action removes tap delay. transition overrides global 300ms so it snaps color fast. -->
+                    <button onclick="toggleBookmark()" id="bookmarkBtn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)]" style="touch-action: manipulation; transition: color 0.15s, transform 0.15s;">
                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v18l7-3 7 3V3H5z"/></svg>
                     </button>
                 </div>
@@ -349,8 +366,8 @@
 
     <!-- Right-Click / 3-Dots Context Menu for Books -->
     <div id="bookContextMenu" class="fixed z-[300] bg-[var(--bg-secondary)] border border-[var(--border)] rounded-lg shadow-xl py-1 hidden w-32">
-        <button id="renameBookBtn" class="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]">Rename</button>
-        <button id="deleteBookBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">Delete</button>
+        <button id="renameBookBtn" class="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]" style="touch-action: manipulation;">Rename</button>
+        <button id="deleteBookBtn" class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" style="touch-action: manipulation;">Delete</button>
     </div>
 
     <!-- Add Book & Language Selection Modal -->
@@ -372,8 +389,8 @@
             <input type="text" id="customLangInput" placeholder="Enter language (e.g. Esperanto)" class="hidden w-full p-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm mb-6 outline-none focus:border-[var(--text-primary)]">
             
             <div class="flex justify-end gap-2 mt-4">
-                <button onclick="cancelUpload()" class="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-lg">Cancel</button>
-                <button onclick="confirmUpload()" id="confirmUploadBtn" class="px-5 py-2 text-xs font-medium bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-lg hover:opacity-90 flex items-center justify-center min-w-[100px]">
+                <button onclick="cancelUpload()" class="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] rounded-lg" style="touch-action: manipulation;">Cancel</button>
+                <button onclick="confirmUpload()" id="confirmUploadBtn" class="px-5 py-2 text-xs font-medium bg-[var(--text-primary)] text-[var(--bg-primary)] rounded-lg hover:opacity-90 flex items-center justify-center min-w-[100px]" style="touch-action: manipulation;">
                     Import Book
                 </button>
             </div>
@@ -384,7 +401,7 @@
     <div id="wordPopover" class="fixed p-4 w-64 hidden transition-opacity duration-200 z-[100]">
         <div class="flex justify-between items-start mb-2">
             <span id="targetWord" class="font-medium text-[var(--text-primary)]">Word</span>
-            <button onclick="closePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
+            <button onclick="closePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none" style="touch-action: manipulation;">&times;</button>
         </div>
         <div id="wordDefinition" class="text-xs text-[var(--text-secondary)] leading-relaxed">Loading...</div>
     </div>
@@ -393,7 +410,7 @@
     <div id="sentencePopover" class="fixed p-5 hidden transition-opacity duration-200 z-[100]">
         <div class="flex justify-between items-start mb-3">
             <span class="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-secondary)]">Translation</span>
-            <button onclick="closeSentencePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none">&times;</button>
+            <button onclick="closeSentencePopover()" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg leading-none" style="touch-action: manipulation;">&times;</button>
         </div>
         <div class="sentence-orig" id="sentenceOrigText"></div>
         <div class="sentence-trans" id="sentenceTransText">Loading...</div>
@@ -610,11 +627,11 @@
             els.libraryGrid.innerHTML = '';
 
             const addCard = document.createElement('div');
-            // Simplified class list. Global CSS handles color transitions smoothly.
-            addCard.className = 'bg-[var(--bg-tertiary)] border border-dashed border-[var(--border)] rounded-xl p-3 cursor-pointer hover:bg-[var(--bg-secondary)] hover:border-[var(--text-primary)] flex flex-col items-center justify-center aspect-[3/4] group transition-transform hover:-translate-y-1';
+            // Guaranteed sync using transition-all duration-300
+            addCard.className = 'bg-[var(--bg-tertiary)] border border-dashed border-[var(--border)] rounded-xl p-3 cursor-pointer hover:bg-[var(--bg-secondary)] hover:border-[var(--text-primary)] flex flex-col items-center justify-center aspect-[3/4] group transition-all duration-300 hover:-translate-y-1';
             addCard.innerHTML = `
-                <div class="w-8 h-8 rounded-full bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform">+</div>
-                <h3 class="font-medium text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]">Add Book</h3>
+                <div class="w-8 h-8 rounded-full bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform duration-300">+</div>
+                <h3 class="font-medium text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors duration-300">Add Book</h3>
             `;
             addCard.onclick = () => document.getElementById('uploadInput').click();
             els.libraryGrid.appendChild(addCard);
@@ -624,18 +641,18 @@
                 const targetLanguage = book.targetLang || 'English';
 
                 const card = document.createElement('div');
-                card.className = 'book-card bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-3 cursor-pointer hover:-translate-y-1 hover:shadow-md flex flex-col aspect-[3/4] relative group transition-transform';
+                card.className = 'book-card bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl p-3 cursor-pointer hover:-translate-y-1 hover:shadow-md flex flex-col aspect-[3/4] relative group transition-all duration-300';
                 card.innerHTML = `
-                    <div class="absolute top-2 left-2 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-[var(--border)]">
+                    <div class="absolute top-2 left-2 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-[var(--border)] transition-colors duration-300">
                         TO ${targetLanguage}
                     </div>
                     
-                    <button class="absolute top-1.5 right-1.5 p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded z-10" onclick="showBookContextMenu(event, '${book.id}')">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                    <button class="absolute top-1.5 right-1.5 p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded z-10 transition-colors duration-300" onclick="showBookContextMenu(event, '${book.id}')" style="touch-action: manipulation;">
+                        <svg class="w-4 h-4 transition-colors duration-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                     </button>
 
-                    <h3 class="font-medium text-xs mt-7 mb-1 line-clamp-3 leading-snug text-[var(--text-primary)]">${book.title}</h3>
-                    <p class="text-[9px] text-[var(--text-secondary)] mt-auto">${totalPages} pages</p>
+                    <h3 class="font-medium text-xs mt-7 mb-1 line-clamp-3 leading-snug text-[var(--text-primary)] transition-colors duration-300">${book.title}</h3>
+                    <p class="text-[9px] text-[var(--text-secondary)] mt-auto transition-colors duration-300">${totalPages} pages</p>
                 `;
                 
                 card.onclick = () => loadBook(book);
@@ -1406,6 +1423,10 @@
             appState.bookmarks.sort((a,b) => a-b);
             updateSidebarUI();
             saveBookToDB(appState);
+            
+            // Add quick visual tactile feedback specifically for iPads bypassing the 300ms transition
+            els.bookmarkBtn.style.transform = 'scale(1.15)';
+            setTimeout(() => { els.bookmarkBtn.style.transform = ''; }, 150);
         }
 
         function updateSidebarUI() {
